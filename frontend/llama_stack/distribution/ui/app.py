@@ -9,8 +9,8 @@ def main():
     # Define available pages: path and icon
     pages = {
         "Chat": ("page/playground/chat.py", "💬"),
+        "Upload Documents": ("page/upload/upload.py", "📄"),
         "Inspect": ("page/distribution/inspect.py", "🔍"),
-        "Upload": ("page/upload/upload.py", "📄"),
     }
 
     # Build navigation items dynamically
