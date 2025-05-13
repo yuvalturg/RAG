@@ -472,6 +472,9 @@ def tool_chat_page():
                             yield f'\n\n🛠 :grey[_Using "{tool_name}" tool:_]\n\n'
                         else:
                             yield "No tool_calls present in step_details"
+                    if response.event.payload.step_details.step_type == "shield_call":
+                        if response.event.payload.step_details.violation:
+                            yield response.event.payload.step_details.violation.user_message
             else:
                 yield f"Error occurred in the Llama Stack Cluster: {response}"
                 debug_events_list.append({"type": "warning", "source": "_handle_regular_response", "details": "Unexpected event structure", "event": str(response)[:200]})
