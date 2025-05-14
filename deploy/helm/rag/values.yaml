@@ -1,9 +1,9 @@
 replicaCount: 1
 
 image:
-  repository: docker.io/burrsutter/rag
+  repository: quay.io/ecosystem-appeng/llamastack-dist-ui
   pullPolicy: IfNotPresent
-  tag: v1
+  tag: 0.2.6
 
 service:
   type: ClusterIP
