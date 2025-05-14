@@ -16,7 +16,7 @@ MINIO_USER ?= minio_rag_user
 MINIO_PASSWORD ?= minio_rag_password
 HF_TOKEN ?= $(shell bash -c 'read -r -p "Enter Hugging Face Token: " HF_TOKEN; echo $$HF_TOKEN')
 RAG_CHART := rag
-TOLERATIONS_TEMPLATE=[{"key":"$(1)","effect":"NoSchedule","operator":"Exists"}]
+TOLERATIONS_TEMPLATE=[{"key":"$(1)","effect":"NoSchedule","operator":"Exists"}, {"key":"nvidia.com/gpu","effect":"NoSchedule","operator":"Exists"}]
 
 #ingestion pipeline configuration
 SOURCE ?= S3

@@ -123,7 +123,7 @@ oc login --server="<cluster-api-endpoint>" --token="sha256~XYZ"
 
 
 ```bash
-oc get nodes -o yaml | grep -A 3 taint
+oc get nodes -l nvidia.com/gpu.present=true -o yaml | grep -A 3 taint 
 ```
 The output of the command will be something like below
 ```
