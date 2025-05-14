@@ -91,13 +91,15 @@ Verify the container is running:
 podman ps
 ```
 
-Note:  If you are unable to run the Llama Stack server via `docker` or `podman` you could also try using the service from the cluster via `oc port-forward`
+Note:  Another option is to connect to a remote Llama Stack Service where we have on running in cluster using `oc port-forward`
 
 ```bash
+oc get services -l app.kubernetes.io/name=llamastack
+
 oc port-forward svc/llamastack 8321:8321
 ```
 
-This also makes the service available at localhost:8321
+This makes the remote Service available at localhost:8321
 
 ---
 
@@ -197,24 +199,31 @@ Deployment after making changes requires a rebuild of the container image using 
 Note: Use your favorite repository, organization and image name
 
 ```bash
-podman buildx build --platform linux/amd64,linux/arm64 -t docker.io/burrsutter/rag:v1 -f Containerfile .
+export CONTAINER_REGISTRY=docker.io # quay.io
+export CONTAINER_ORGANIZATION=yourorg
+export IMAGE_NAME=rag
+export IMAGE_TAG=1.0.0
 ```
 
 ```bash
-podman login docker.io
+podman buildx build --platform linux/amd64,linux/arm64 -t $CONTAINER_REGISTRY/$CONTAINER_ORGANIZATION/$IMAGE_NAME:$IMAGE_TAG -f Containerfile .
 ```
 
 ```bash
-podman push docker.io/burrsutter/rag:v1
+podman login $CONTAINER_REGISTRY
 ```
 
-Add modification to `deploy/helm/rag/values.yaml`
+```bash
+podman push $CONTAINER_REGISTRY/$CONTAINER_ORGANIZATION/$IMAGE_NAME:$IMAGE_TAG
+```
+
+Add modification to `deploy/helm/rag/values.yaml`, replacing the placeholders with your values
 
 ```
 image:
-  repository: docker.io/burrsutter/rag
+  repository: {CONTAINER_REGISTRY}/{CONTAINER_ORGANIZATION}/{IMAGE_NAME}
   pullPolicy: IfNotPresent
-  tag: v1
+  tag: {IMAGE_TAG}
 ```
 
  To redeploy to the cluster run the same `make` command as you did before.
