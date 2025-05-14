@@ -91,6 +91,14 @@ Verify the container is running:
 podman ps
 ```
 
+Note:  If you are unable to run the Llama Stack server via `docker` or `podman` you could also try using the service from the cluster via `oc port-forward`
+
+```bash
+oc port-forward svc/llamastack 8321:8321
+```
+
+This also makes the service available at localhost:8321
+
 ---
 
 ## 🐍 5. Set Up Python Environment
@@ -176,9 +184,45 @@ Available Models
 Total models: 2
 ```
 
+## 7. Run the RAG UI
+
+```bash
+streamlit run llama_stack/distribution/ui/app.py
+```
+
+## 8. Redeploy changes
+
+Deployment after making changes requires a rebuild of the container image using either `docker` or `podman`.  Replace `docker.io` with your target container registry such as `quay.io`.
+
+Note: Use your favorite repository, organization and image name
+
+```bash
+podman buildx build --platform linux/amd64,linux/arm64 -t docker.io/burrsutter/rag:v1 -f Containerfile .
+```
+
+```bash
+podman login docker.io
+```
+
+```bash
+podman push docker.io/burrsutter/rag:v1
+```
+
+Add modification to `deploy/helm/rag/values.yaml`
+
+```
+image:
+  repository: docker.io/burrsutter/rag
+  pullPolicy: IfNotPresent
+  tag: v1
+```
+
+ To redeploy to the cluster run the same `make` command as you did before.
+
+
 ---
 
-## 🧰 8. Troubleshooting Tips
+## Troubleshooting Tips
 
 **Check if Podman is running:**
 
