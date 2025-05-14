@@ -226,7 +226,6 @@ def tool_chat_page():
     
 
     updated_toolgroup_selection = []
-    display_agent_missing_vector_db_warning = False
     if processing_mode == "Agent-based":
         for i, tool_name in enumerate(toolgroup_selection):
             if tool_name == "builtin::rag":
@@ -238,8 +237,6 @@ def tool_chat_page():
                         },
                     )
                     updated_toolgroup_selection.append(tool_dict)
-                else:
-                    display_agent_missing_vector_db_warning = True
             else:
                 updated_toolgroup_selection.append(tool_name)
 
@@ -295,11 +292,6 @@ def tool_chat_page():
         st.session_state["debug_events"] = []
 
     render_history(tool_debug) # Display current chat history and any past debug events
-
-    if (processing_mode == "Direct" or display_agent_missing_vector_db_warning ) and len(selected_vector_dbs) == 0:
-        st.warning(f"RAG tool is missing vector database. No context will be provided to LLM.")
-
-
 
     def response_generator(turn_response, debug_events_list):
         if st.session_state.get("agent_type") == AgentType.REACT:
