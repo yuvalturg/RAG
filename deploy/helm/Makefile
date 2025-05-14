@@ -114,8 +114,6 @@ install: namespace depend
 		$(EXTRA_HELM_ARGS)
 	@echo "Waiting for model services and llamastack to deploy. It may take around 10-15 minutes depending on the size of the model..."
 	@oc rollout status deploy/llamastack
-	@$(MAKE) create-minio-bucket
-	@$(MAKE) upload-pdf
 	@echo "$(RAG_CHART) installed successfully"
 
 # Uninstall the deployment and clean up
@@ -149,30 +147,3 @@ status:
 
 	@echo "Listing pvcs..."
 	oc get pvc -n $(NAMESPACE) || true
-
-.PHONY: create-minio-bucket
-create-minio-bucket:
-	oc wait -n $(NAMESPACE) --for=condition=Ready pod/minio-0 --timeout=300s
-	sleep 5
-	oc exec -n $(NAMESPACE) minio-0 -- bash -c "mc alias set local http://localhost:9000 $(MINIO_USER) $(MINIO_PASSWORD) && mc mb local/$(BUCKET_NAME)" ||:
-
-.PHONY: upload-pdf
-upload-pdf:
-	@echo "Uploading all PDF files from $(PDF_DIR) to Minio bucket $(BUCKET_NAME)..."
-	@echo "Waiting for minio-0 pod to be ready..."
-	oc wait -n $(NAMESPACE) --for=condition=Ready pod/minio-0 --timeout=60s
-	@echo "Setting up minio client alias..."
-	oc exec -n $(NAMESPACE) minio-0 -- bash -c "mc alias set local http://localhost:9000 $(MINIO_USER) $(MINIO_PASSWORD)"
-	@find $(PDF_DIR) -name "*.pdf" -type f | while read -r pdf_file; do \
-		echo "Uploading $${pdf_file}..."; \
-		test -f "$${pdf_file}" || { echo "Error: File $${pdf_file} not found"; continue; }; \
-		temp_name="tmp_$$(date +%s)_$${RANDOM}.pdf"; \
-		echo "Creating temporary file in minio pod with safe name: $${temp_name}"; \
-		cat "$${pdf_file}" | oc exec -i -n $(NAMESPACE) minio-0 -- bash -c "cat > /tmp/$${temp_name}"; \
-		orig_name="$$(basename "$${pdf_file}")"; \
-		echo "Uploading file to bucket with original name: $${orig_name}"; \
-		oc exec -n $(NAMESPACE) minio-0 -- bash -c "mc cp /tmp/$${temp_name} local/$(BUCKET_NAME)/$${temp_name} && \
-		mc mv local/$(BUCKET_NAME)/$${temp_name} \"local/$(BUCKET_NAME)/$${orig_name}\" && \
-		rm /tmp/$${temp_name}"; \
-		echo "PDF file '$${pdf_file}' uploaded successfully to Minio bucket $(BUCKET_NAME)"; \
-	done
