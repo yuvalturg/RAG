@@ -81,7 +81,7 @@ The kickstart supports two modes of deployments
 - OpenShift Cluster 4.16+ with OpenShift AI
 - OpenShift Client CLI - [oc](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/cli_tools/openshift-cli-oc#installing-openshift-cli)
 - Helm CLI - helm
-- [huggingface-cli](https://huggingface.co/docs/huggingface_hub/guides/cli) (Optional)
+- [huggingface-cli](https://huggingface.co/docs/huggingface_hub/guides/cli) (optional)
 - 1 GPU with 24GB of VRAM for the LLM, refer to the chart below
 - 1 GPU with 24GB of VRAM for the safety/shield model (optional)
 - [Hugging Face Token](https://huggingface.co/settings/tokens)
@@ -108,7 +108,7 @@ Note: the 70B model is NOT required for initial testing of this example.  The sa
 1. Clone the repo so you have a working copy
 
 ```bash
-git clone https://github.com/RHEcosystemAppEng/RAG-Blueprint
+git clone https://github.com/rh-ai-kickstart/RAG
 ```
 
 2. Login to your OpenShift Cluster
@@ -125,7 +125,7 @@ oc login --server="<cluster-api-endpoint>" --token="sha256~XYZ"
 ```bash
 oc get nodes -l nvidia.com/gpu.present=true -o yaml | grep -A 3 taint 
 ```
-The output of the command will be something like below
+The output of the command may be something like below
 ```
   taints:
     - effect: NoSchedule
@@ -158,6 +158,7 @@ The above command will list the models to use in the next command
 (Output)
 model: llama-3-1-8b-instruct (meta-llama/Llama-3.1-8B-Instruct)
 model: llama-3-2-1b-instruct (meta-llama/Llama-3.2-1B-Instruct)
+model: llama-3-2-1b-instruct-quantized (RedHatAI/Llama-3.2-1B-Instruct-quantized.w8a8)
 model: llama-3-2-3b-instruct (meta-llama/Llama-3.2-3B-Instruct)
 model: llama-3-3-70b-instruct (meta-llama/Llama-3.3-70B-Instruct)
 model: llama-guard-3-1b (meta-llama/Llama-Guard-3-1B)
@@ -192,7 +193,7 @@ make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct SAFETY=llama-gu
 
 When prompted, enter your **[Hugging Face Token]((https://huggingface.co/settings/tokens))**.
 
-Note: This process often takes 11 to 30 minutes
+Note: This process may take 10 to 30 minutes depending on the number and size of models to be downloaded. 
 
 7. Watch/Monitor
 
@@ -203,26 +204,28 @@ oc get pods -n llama-stack-rag
 ```
 (Output)
 NAME                                                               READY   STATUS      RESTARTS   AGE
-demo-rag-vector-db-v1-0-2ssgk                                      0/1     Error       0          7m49s
-demo-rag-vector-db-v1-0-fhlpw                                      0/1     Completed   0          7m15s
-demo-rag-vector-db-v1-0-zx9q9                                      0/1     Error       0          8m16s
-ds-pipeline-dspa-6899c9df7c-4j459                                  2/2     Running     0          7m53s
-ds-pipeline-metadata-envoy-dspa-7659ddc8d9-vh24q                   2/2     Running     0          7m51s
-ds-pipeline-metadata-grpc-dspa-8665cd5c6c-4z9g6                    1/1     Running     0          7m51s
-ds-pipeline-persistenceagent-dspa-56f888bc78-h2mtr                 1/1     Running     0          7m53s
-ds-pipeline-scheduledworkflow-dspa-c94d5c95d-j4874                 1/1     Running     0          7m52s
-ds-pipeline-workflow-controller-dspa-5799548b68-bs6pj              1/1     Running     0          7m52s
-fetch-and-store-pipeline-pf6nr-system-container-driver-692373917   0/2     Completed   0          6m38s
-fetch-and-store-pipeline-pf6nr-system-container-impl-2125359307    0/2     Error       0          6m28s
-fetch-and-store-pipeline-pf6nr-system-dag-driver-3719582226        0/2     Completed   0          6m59s
-llama-3-2-3b-instruct-predictor-00001-deployment-6b85857bd4nfhr    3/3     Running     0          12m
-llamastack-6f55c69f7c-ctctl                                        1/1     Running     0          8m54s
-mariadb-dspa-74744d65bd-gqnzb                                      1/1     Running     0          8m17s
-mcp-servers-weather-65cff98c8b-42n8h                               1/1     Running     0          8m58s
-minio-0                                                            1/1     Running     0          8m52s
-pgvector-0                                                         1/1     Running     0          8m53s
-rag-pipeline-notebook-0                                            2/2     Running     0          8m17s
-rag-rag-ui-6c756945bf-st6hm                                        1/1     Running     0          8m55s
+demo-rag-vector-db-v1-0-8mkf9                                      0/1     Completed   0          10m
+ds-pipeline-dspa-7788689675-9489m                                  2/2     Running     0          10m
+ds-pipeline-metadata-envoy-dspa-948676f89-8knw8                    2/2     Running     0          10m
+ds-pipeline-metadata-grpc-dspa-7b4bf6c977-cb72m                    1/1     Running     0          10m
+ds-pipeline-persistenceagent-dspa-ff9bdfc76-ngddb                  1/1     Running     0          10m
+ds-pipeline-scheduledworkflow-dspa-7b64d87fd8-58d87                1/1     Running     0          10m
+ds-pipeline-workflow-controller-dspa-5799548b68-bxpdp              1/1     Running     0          10m
+fetch-and-store-pipeline-tmxwj-system-container-driver-287597120   0/2     Completed   0          3m43s
+fetch-and-store-pipeline-tmxwj-system-container-driver-922184592   0/2     Completed   0          2m54s
+fetch-and-store-pipeline-tmxwj-system-container-impl-3210250134    0/2     Completed   0          4m33s
+fetch-and-store-pipeline-tmxwj-system-container-impl-3248801382    0/2     Completed   0          3m32s
+fetch-and-store-pipeline-tmxwj-system-dag-driver-3443954210        0/2     Completed   0          4m6s
+llama-3-2-3b-instruct-predictor-00001-deployment-6bbf96f8674677    3/3     Running     0          10m
+llamastack-6d5c5b999b-5lffb                                        1/1     Running     0          11m
+mariadb-dspa-74744d65bd-fdxjd                                      1/1     Running     0          10m
+minio-0                                                            1/1     Running     0          10m
+minio-dspa-7bb47d68b4-nvw7t                                        1/1     Running     0          10m
+pgvector-0                                                         1/1     Running     0          10m
+rag-7fd7b47844-nlfvr                                               1/1     Running     0          11m
+rag-mcp-weather-9cc97d574-nf5q8                                    1/1     Running     0          11m
+rag-pipeline-notebook-0                                            2/2     Running     0          10m
+upload-sample-docs-job-f5k5w                                       0/1     Completed   0          10m
 ```
 
 8. Verify:
@@ -233,31 +236,55 @@ oc get svc -n llama-stack-rag
 oc get routes -n llama-stack-rag
 ```
 
-### Using the RAG UI
-
-1. Get the route url for the application
+Note: The key pods to watch include **predictor** in their name, those are the kserve model servers running vLLM
 
 ```bash
-URL=http://$(oc get routes -l app.kubernetes.io/name=rag-ui -o jsonpath="{range .items[*]}{.status.ingress[0].host}{end}")
+oc get pods -l component=predictor
+```
+
+Look for **3/3** under the Ready column
+
+The **inferenceservice** CR describes the limits, requests, model name, serving-runtime, chat-template, etc. 
+
+```bash
+oc get inferenceservice llama-3-2-3b-instruct \
+  -n llama-stack-rag-1 \
+  -o jsonpath='{.spec.predictor.model}' | jq
+```
+
+Watch the **llamastack** pod as that one becomes available after all the model servers are up.
+
+```bash
+ oc get pods -l app.kubernetes.io/name=llamastack
+```
+
+### Using the RAG UI
+
+1. Get the route url for the application and open in your browser
+
+```bash
+URL=http://$(oc get routes -l app.kubernetes.io/name=rag -o jsonpath="{range .items[*]}{.status.ingress[0].host}{end}")
 echo $URL
 open $URL
 ```
 
 ![RAG UI Main](./docs/img/rag-ui-1.png)
 
-2. Click on RAG
+2. Click on **Upload Documents**
 
-3. Upload your document
+3. Upload your PDF document
 
-4. Create a Vector Database
+4. Name and Create a Vector Database
 
 ![RAG UI Main 2](./docs/img/rag-ui-2.png)
 
-5. Once you've recieved `Vector database created successfully!`, select the Vector Database you created
+5. Once you've recieved **Vector database created successfully!**, navigate back to **Chat** and select the newly created vector db.
+
+![RAG UI Main 3](./docs/img/rag-ui-3.png)
 
 6. Ask a question pertaining to your document!
 
-![RAG UI Main 3](./docs/img/rag-ui-3.png)
+![RAG UI Main 4](./docs/img/rag-ui-4.png)
 
 Refer to the [post installation](docs/post_installation.md) document for batch document ingestion.
 
@@ -272,156 +299,97 @@ or
 oc delete project llama-stack-rag
 ```
 
-## Defining a new model
-To deploy a new model using the `llm-service` Helm chart or connect to an existing vLLM server, follow these steps:
+## Adding a new model
+To add another model follow these steps:
 
-1. Deploying a Model via `llm-service`
+1. Edit `deploy\helm\rag\values.yaml` 
 
-    If you're deploying the model with `llm-service`, edit the file `deploy/helm/llm-service/values-gpu.yaml` and add a new model definition under the `.models` section to specify the model you want deployed with the `llm-service` chart and its args:
+    Update the **global\models** section
     ```yaml
+    global:
       models:
-        llama-3-2-3b-instruct:
-          id: meta-llama/Llama-3.2-3B-Instruct
-          enabled: false
-          inferenceService:
-            args:
-            - --enable-auto-tool-choice
-            - --chat-template
-            - /vllm-workspace/examples/tool_chat_template_llama3.2_json.jinja
-            - --tool-call-parser
-            - llama3_json
-            - --max-model-len
-            - "30544"
+        granite-vision-3-2-2b:
+          id: ibm-granite/granite-vision-3.2-2b
+          enabled: true      
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+          tolerations:
+          - key: "nvidia.com/gpu"
+            operator: Exists
+            effect: NoSchedule
+          args:
+          - --tensor-parallel-size
+          - "1"
+          - --max-model-len
+          - "6144"
+          - --enable-auto-tool-choice
+          - --tool-call-parser
+          - granite
+        llama-guard-3-8b:
+          id: meta-llama/Llama-Guard-3-8B
+          enabled: true
+          registerShield: true
+          tolerations:
+          - key: "nvidia.com/gpu"
+            operator: Exists
+            effect: NoSchedule
+          args:
+          - --max-model-len
+          - "14336"
     ```
 
-2. Update `llama-stack` Configuration
+  Note: Make sure you have permission to download the models from Huggingface and enough GPUs to support all the models you have requested.  Also **max-model-len** uses additional VRAM therefore you have to scale that parameter to fit your hardware. 
 
-    Edit the file `deploy/helm/rag-ui/charts/llama-stack/values.yaml` and add a corresponding entry under `.models` for the LLaMA stack configuration.
-    ```yaml
-      llama-3-2-3b-instruct:
-        id: meta-llama/Llama-3.2-3B-Instruct
-        enabled: false
-        url: local-ns
+2. Run the **make** command again to update the project
+
+    ```bash
+    make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct LLM_TOLERATION="nvidia.com/gpu"
     ```
 
-Notes:
-* If the model is not deployed with `llm-service` in the same namespace as `llama-stack`, you do not need to modify the `llm-service` values.  Instead, just configure the the external model in `llama-stack` and replace `local-ns` with a url, and an optional `apiToken`.
-* To use the new model, set the `enabled` flags to true.
+    ```bash
+    (Output)
+    NAME                                                                READY   STATUS                   RESTARTS      AGE
+    demo-rag-vector-db-v1-0-vz5mf                                       0/1     Completed                0             35m
+    ds-pipeline-dspa-6dcf8c7b8f-vkhw8                                   2/2     Running                  1 (34m ago)   34m
+    ds-pipeline-metadata-envoy-dspa-7659ddc8d9-qvtct                    2/2     Running                  0             34m
+    ds-pipeline-metadata-grpc-dspa-8665cd5c6c-mfrj7                     1/1     Running                  0             34m
+    ds-pipeline-persistenceagent-dspa-56f888bc78-lzq9s                  1/1     Running                  0             34m
+    ds-pipeline-scheduledworkflow-dspa-c94d5c95d-rr8td                  1/1     Running                  0             34m
+    ds-pipeline-workflow-controller-dspa-5799548b68-z2lcl               1/1     Running                  0             34m
+    fetch-and-store-pipeline-w7gxh-system-container-driver-1552269565   0/2     Completed                0             30m
+    fetch-and-store-pipeline-w7gxh-system-container-driver-2057025395   0/2     Completed                0             30m
+    fetch-and-store-pipeline-w7gxh-system-container-impl-1487941461     0/2     Completed                0             30m
+    fetch-and-store-pipeline-w7gxh-system-container-impl-883889707      0/2     Completed                0             29m
+    fetch-and-store-pipeline-w7gxh-system-dag-driver-190510417          0/2     Completed                0             30m
+    granite-vision-3-2-2b-predictor-00001-deployment-5dbcf6f454mrd6     3/3     Running                  0             10m
+    granite-vision-3-2-2b-predictor-00001-deployment-5dbcf6f45xxk5x     0/3     ContainerStatusUnknown   3             13m
+    llama-3-2-3b-instruct-predictor-00001-deployment-6f845f65674ncq     3/3     Running                  0             35m
+    llama-guard-3-8b-predictor-00001-deployment-6cbff4965c-gzx5v        3/3     Running                  0             13m
+    llamastack-7989d974fc-w24fn                                         1/1     Running                  0             13m
+    mariadb-dspa-74744d65bd-kb2dh                                       1/1     Running                  0             35m
+    minio-0                                                             1/1     Running                  0             35m
+    minio-dspa-7bb47d68b4-kb722                                         1/1     Running                  0             35m
+    pgvector-0                                                          1/1     Running                  0             35m
+    rag-7fd7b47844-jkqtf                                                1/1     Running                  0             35m
+    rag-mcp-weather-9cc97d574-s8vpt                                     1/1     Running                  0             35m
+    rag-pipeline-notebook-0                                             2/2     Running                  0             35m
+    upload-sample-docs-job-952gj                                        0/1     Completed                0             35m
+    ```
+
+Return to the RAG UI and look into the **Inspect** tab to see the additional models and shields. 
+
+![RAG UI Main 5](./docs/img/rag-ui-5.png)
+
+The newly added shield can be tested via the UI by selecting **Agent-based** and Chat
+
+![RAG UI Main 6](./docs/img/rag-ui-6.png)
 
 
 ## Local Development Setup
 
 Refer to the [local setup guide](docs/local_setup_guide.md) document for configuring your workstation for code changes and local testing.
 
-1. From the root of the project, switch to the ui directory
 
-```bash
-cd ui
-```
 
-2. Create a virtual environment (Python based development often works better with a virtual environment)
 
-```bash
-python3.11 -m venv venv
-source venv/bin/activate
-```
-
-3. Download the dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-4. Port forward the service inside of OpenShift to the local machine on port 8321
-
-```bash
-oc port-forward svc/llamastack 8321:8321
-```
-
-5. Launch the application and opens a browser tab with the `streamlit` command
-
-```bash
-streamlit run app.py
-```
-
-6. Give the weather MCP-based tool a test with a US-based city by toggling on "mcp::weather" via a click for real-time weather information
-
-![RAG UI MCP weather](./docs/img/rag-ui-3.png)
-
-### Redeploy Changes
-
-Make changes to app.py
-
-Deployment after making changes requires a rebuild of the container image using either `docker` or `podman`.  Replace `docker.io` with your target container registry such as `quay.io`.
-
-```bash
-docker buildx build --platform linux/amd64,linux/arm64 -t docker.io/burrsutter/rag-ui:v1 -f Containerfile .
-```
-
-```bash
-docker push docker.io/burrsutter/rag-ui:v1
-```
-
-Add modification to `deploy/helm/rag-ui/values.yaml`
-
-```
-image:
-  repository: docker.io/burrsutter/rag-ui
-  pullPolicy: IfNotPresent
-  tag: v1
-```
-
- To redeploy to the cluster run the same `make` command as you did before.
-
-### Shields
-
-```bash
-export LLAMA_STACK_ENDPOINT=http://localhost:8321
-```
-
-First see what models are available
-
-```bash
-curl -sS $LLAMA_STACK_SERVER/v1/models -H "Content-Type: application/json" | jq -r '.data[].identifier'
-```
-
-```
-(Output)
-meta-llama/Llama-3.2-3B-Instruct
-meta-llama/Llama-Guard-3-8B
-all-MiniLM-L6-v2
-```
-
-The "Guard" model is the one appropriate for adding as a Llama Stack Shield.
-
-From within the `ui` directory or whichever one has the `venv` with the dependencies:
-
-- Register the shield
-
-```
-python ../shields/register-shield.py
-```
-
-- List shields
-
-```
-python ../shields/list-shields.py
-```
-
-- Test the shield
-
-```
-python ../shields/test-shield.py
-```
-
-```
-(Output)
-LLAMA_STACK_ENDPOINT: http://localhost:8321
-LLAMA_STACK_MODEL: meta-llama/Llama-3.2-3B-Instruct
-Safety violation detected: I can't answer that. Can I help with something else?
-'response: <generator object Agent._create_turn_streaming at 0x1052ecd60>'
-shield_call> No Violation
-inference> The friendly stranger smiled and said hello as she approached the table where I was sitting alone.
-'response: <generator object Agent._create_turn_streaming at 0x1052ed000>'
-shield_call> {'violation_type': 'S1'} I can't answer that. Can I help with something else?
-```

@@ -91,6 +91,16 @@ Verify the container is running:
 podman ps
 ```
 
+Note:  Another option is to connect to a remote Llama Stack Service.  Based on the instructions of this kickstart, you should have one running in cluster and you can use `oc port-forward` to make it available on localhost.
+
+```bash
+oc get services -l app.kubernetes.io/name=llamastack
+
+oc port-forward svc/llamastack 8321:8321
+```
+
+This makes the remote Service available at localhost:8321
+
 ---
 
 ## 🐍 5. Set Up Python Environment
@@ -176,9 +186,52 @@ Available Models
 Total models: 2
 ```
 
+## 7. Run the RAG UI
+
+```bash
+streamlit run llama_stack/distribution/ui/app.py
+```
+
+## 8. Redeploy changes
+
+Deployment after making changes requires a rebuild of the container image using either `docker` or `podman`.  Replace `docker.io` with your target container registry such as `quay.io`.
+
+Note: Use your favorite repository, organization and image name
+
+```bash
+export CONTAINER_REGISTRY=docker.io # quay.io
+export CONTAINER_ORGANIZATION=yourorg
+export IMAGE_NAME=rag
+export IMAGE_TAG=1.0.0
+```
+
+```bash
+podman buildx build --platform linux/amd64,linux/arm64 -t $CONTAINER_REGISTRY/$CONTAINER_ORGANIZATION/$IMAGE_NAME:$IMAGE_TAG -f Containerfile .
+```
+
+```bash
+podman login $CONTAINER_REGISTRY
+```
+
+```bash
+podman push $CONTAINER_REGISTRY/$CONTAINER_ORGANIZATION/$IMAGE_NAME:$IMAGE_TAG
+```
+
+Add modification to `deploy/helm/rag/values.yaml`, replacing the placeholders with your values
+
+```
+image:
+  repository: {CONTAINER_REGISTRY}/{CONTAINER_ORGANIZATION}/{IMAGE_NAME}
+  pullPolicy: IfNotPresent
+  tag: {IMAGE_TAG}
+```
+
+ To redeploy to the cluster run the same `make` command as you did before.
+
+
 ---
 
-## 🧰 8. Troubleshooting Tips
+## Troubleshooting Tips
 
 **Check if Podman is running:**
 
