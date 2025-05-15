@@ -1,7 +1,7 @@
 # Makefile for RAG Deployment
 # Replaces the original deploy.sh script with additional uninstall functionality
 ifeq ($(NAMESPACE),)
-ifeq (,$(filter depend list-models% help,$(MAKECMDGOALS)))
+ifeq (,$(filter depend install-ingestion-pipeline list-models% help,$(MAKECMDGOALS)))
 $(error NAMESPACE is not set)
 endif
 endif
@@ -31,6 +31,10 @@ REGION ?= us-east-1
 # PDF file path variable for upload-pdf target
 PDF_DIR = ../../notebooks
 S3_TEMPLATE={"access_key_id":"$(1)","secret_access_key":"$(2)","bucket_name":"$(3)","endpoint_url":"$(4)","region":"$(5)"}
+
+# CUSTOM VALUES (full path) FOR EXTRA INGESTION PIPELINE
+# CUSTOM_INGESTION_PIPELINE_VALUES = ~/my-values.yaml
+# CUSTOM_INGESTION_PIPELINE_NAME ?= my-pipeline
 
 helm_pgvector_args = \
     --set pgvector.secret.user=$(POSTGRES_USER) \
@@ -71,6 +75,7 @@ help:
 	@echo "Available targets:"
 	@echo "  list-models   - List available models"
 	@echo "  install       - Install the RAG deployment (creates namespace, secrets, and deploys Helm chart)"
+	@echo "  install-ingestion-pipeline - Install extra ingestion pipelines (must be on the same namespace as the RAG deployment)"
 	@echo "  uninstall     - Uninstall the RAG deployment and clean up resources"
 	@echo "  status        - Check status of the deployment"
 	@echo ""
@@ -82,6 +87,8 @@ help:
 	@echo "  {SAFETY,LLM}_URL         - Model URL"
 	@echo "  {SAFETY,LLM}_API_TOKEN   - Model API token for remote models"
 	@echo "  {SAFETY,LLM}_TOLERATION  - Model pod toleration"
+	@echo "  CUSTOM_INGESTION_PIPELINE_VALUES - Custom ingestion pipeline values (full path)"
+	@echo "  CUSTOM_INGESTION_PIPELINE_NAME   - Custom ingestion pipeline name"
 
 # Create namespace and deploy
 namespace:
@@ -129,6 +136,11 @@ uninstall:
 	@echo "If you want to completely remove the namespace, run: oc delete project $(NAMESPACE)"
 	@echo "Remaining resources in namespace $(NAMESPACE):"
 	@$(MAKE) status
+
+# Install extra ingestion pipelines
+.PHONY: install-ingestion-pipeline
+install-ingestion-pipeline:
+	helm install $(CUSTOM_INGESTION_PIPELINE_NAME) rag/charts/ingestion-pipeline-0.1.0.tgz -f $(CUSTOM_INGESTION_PIPELINE_VALUES)
 
 # Check deployment status
 .PHONY: status
