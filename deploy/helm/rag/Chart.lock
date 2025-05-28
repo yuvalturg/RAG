@@ -16,9 +16,9 @@ dependencies:
   version: 0.1.0
 - name: ingestion-pipeline
   repository: https://rh-ai-kickstart.github.io/ai-architecture-charts
-  version: 0.1.0
+  version: 0.2.8
 - name: llama-stack
   repository: https://rh-ai-kickstart.github.io/ai-architecture-charts
-  version: 0.1.0
-digest: sha256:1c25d8b1f2704bd20e49f9dd0ed254f904869b7aebe022e6f866008f2776f3f4
-generated: "2025-05-12T15:00:09.129107899-04:00"
+  version: 0.2.8
+digest: sha256:d003590ccd1dfa8d0a30c29142944edca665422a47431e28b9592a3c68f06be3
+generated: "2025-05-28T15:24:05.994470682-04:00"
