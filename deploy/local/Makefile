@@ -17,7 +17,7 @@ setup_local:
 			--env INFERENCE_MODEL="meta-llama/Llama-3.2-3B-Instruct" \
 			--env OLLAMA_URL=http://host.containers.internal:11434 \
 			--name llamastack \
-			llamastack/distribution-ollama:0.2.8; \
+			llamastack/distribution-ollama:$(VERSION); \
 	fi
 
 run_ui:
