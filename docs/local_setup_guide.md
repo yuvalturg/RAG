@@ -138,7 +138,7 @@ pip show llama-stack-client
 ```
 Output
 Name: llama_stack_client
-Version: 0.2.6
+Version: 0.2.8
 Summary: The official Python library for the llama-stack-client API
 Home-page: https://github.com/meta-llama/llama-stack-client-python
 Author:
