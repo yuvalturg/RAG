@@ -119,7 +119,7 @@ install: namespace depend delete-jobs
 	@$(eval LLAMA_STACK_ARGS := $(call helm_llama_stack_args))
 	@$(eval INGESTION_ARGS := $(call helm_ingestion_args))
 	@echo "Installing $(RAG_CHART) helm chart"
-	@helm upgrade --install $(RAG_CHART) $(RAG_CHART) -n $(NAMESPACE) \
+	@helm -n $(NAMESPACE) upgrade --install $(RAG_CHART) $(RAG_CHART) -n $(NAMESPACE) \
 		$(PGVECTOR_ARGS) \
 		$(MINIO_ARGS) \
 		$(LLM_SERVICE_ARGS) \
@@ -134,7 +134,7 @@ install: namespace depend delete-jobs
 .PHONY: uninstall
 uninstall:
 	@echo "Uninstalling $(RAG_CHART) helm chart"
-	@helm uninstall $(RAG_CHART)
+	@helm -n $(NAMESPACE) uninstall $(RAG_CHART)
 	@echo "Removing pgvector and minio PVCs from $(NAMESPACE)"
 	@oc get pvc -n $(NAMESPACE) -o custom-columns=NAME:.metadata.name | grep -E '^(pg|minio)-data' | xargs -I {} oc delete pvc -n $(NAMESPACE) {} ||:
 	@echo "Deleting remaining pods in namespace $(NAMESPACE)"
@@ -147,13 +147,13 @@ uninstall:
 # Install extra ingestion pipelines
 .PHONY: install-ingestion-pipeline
 install-ingestion-pipeline:
-	helm install $(CUSTOM_INGESTION_PIPELINE_NAME) rag/charts/ingestion-pipeline-0.1.0.tgz -f $(CUSTOM_INGESTION_PIPELINE_VALUES)
+	helm -n $(NAMESPACE) install $(CUSTOM_INGESTION_PIPELINE_NAME) rag/charts/ingestion-pipeline-0.1.0.tgz -f $(CUSTOM_INGESTION_PIPELINE_VALUES)
 
 # Delete all jobs in the namespace
 .PHONY: delete-jobs
 delete-jobs:
 	@echo "Deleting all jobs in namespace $(NAMESPACE)"
-	@oc get jobs -n $(NAMESPACE) -o name | xargs -r oc delete -n $(NAMESPACE) ||:
+	@oc delete jobs -n $(NAMESPACE) --all ||:
 	@echo "Job deletion completed"
 
 # Check deployment status
