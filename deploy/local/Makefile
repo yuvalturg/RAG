@@ -1,4 +1,4 @@
-VERSION ?= 0.2.8
+VERSION ?= 0.2.9
 TAVILY_SEARCH_API_KEY ?= ""
 CONTAINER_REGISTRY ?= quay.io/ecosystem-appeng
 DIST_UI_DIR := $(abspath $(lastword $(MAKEFILE_LIST)/../../../frontend))
