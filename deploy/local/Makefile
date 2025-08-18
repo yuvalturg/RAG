@@ -38,7 +38,8 @@ run_ui_local:
 	cd ../../frontend && \
 	python3.11 -m venv .venv && \
 	source .venv/bin/activate && \
-	pip install -r requirements.txt && \
+	sed "s/__LLAMASTACK_VERSION__/$(VERSION)/g" requirements.txt  > requirements.generated.txt && \
+	pip install -r requirements.generated.txt && \
 	streamlit run llama_stack/distribution/ui/app.py
 
 build_ui:
