@@ -108,7 +108,7 @@ Note: the 70B model is NOT required for initial testing of this example.  The sa
 1. Clone the repo so you have a working copy
 
 ```bash
-git clone https://github.com/rh-ai-kickstart/RAG
+git clone https://github.com/rh-ai-quickstart/RAG
 ```
 
 2. Login to your OpenShift Cluster

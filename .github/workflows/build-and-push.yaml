@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-push:
-    if: github.repository == 'rh-ai-kickstart/RAG'
+    if: github.repository == 'rh-ai-quickstart/RAG'
     runs-on: ubuntu-latest
     strategy:
       matrix:
