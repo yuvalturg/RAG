@@ -31,7 +31,7 @@ vector_db = client.vector_dbs.register(
 print(f"Creating Vector DB ID: {vector_db_id} for provider {provider_id}")
 
 urls = [
-  "https://raw.githubusercontent.com/rh-ai-kickstart/RAG/d504f01c0ade8988a217abc856a6ab41f915a537/notebooks/Zippity_Zoo_Grand_Invention.pdf"
+  "https://raw.githubusercontent.com/rh-ai-quickstart/RAG/d504f01c0ade8988a217abc856a6ab41f915a537/notebooks/Zippity_Zoo_Grand_Invention.pdf"
 ]
 
 documents = [
