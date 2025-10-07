@@ -180,3 +180,7 @@ deploy/helm/namespace
 deploy/helm/secrets
 uv.lock
 .DS_Store
+
+# RAG Stack Configuration
+# User-specific configuration file (contains sensitive data)
+deploy/helm/rag-values.yaml

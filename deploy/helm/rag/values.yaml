@@ -25,6 +25,7 @@ readinessProbe:
 env:
   - name: LLAMA_STACK_ENDPOINT
     value: 'http://llamastack:8321'
+  # TAVILY_SEARCH_API_KEY is automatically added from llama-stack.secrets.TAVILY_SEARCH_API_KEY
 
 volumes:
   - emptyDir: {}
