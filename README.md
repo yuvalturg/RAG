@@ -284,7 +284,7 @@ The **inferenceservice** CR describes the limits, requests, model name, serving-
 
 ```bash
 oc get inferenceservice llama-3-2-3b-instruct \
-  -n llama-stack-rag-1 \
+  -n llama-stack-rag \
   -o jsonpath='{.spec.predictor.model}' | jq
 ```
 
