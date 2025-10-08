@@ -14,7 +14,13 @@ RUN if [ -z "$IMAGE_TAG" ]; then echo "IMAGE_TAG is not set"; exit 1; fi
 RUN pip install uv
 
 # Install dependencies using uv
-RUN uv sync --frozen
+RUN if [ -f "uv.lock" ]; then \
+        echo "Lockfile found, using frozen sync"; \
+        uv sync --frozen; \
+    else \
+        echo "Lockfile not found, creating new one"; \
+        uv sync; \
+    fi
 
 EXPOSE 8501
 
