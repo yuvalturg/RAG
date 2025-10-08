@@ -1,32 +1,59 @@
-# 🦙 Llama Stack Local Setup Guide
-
+<!-- omit from toc -->
+# Local Deployment
 This guide walks you through running a Llama Stack server locally using **Ollama** and **Podman**.
 
----
+<!-- omit from toc -->
+## Table of Contents
+- [Prerequisites](#prerequisites)
+- [Supported Models](#supported-models)
+- [Installing the RAG QuickStart](#installing-the-rag-quickstart)
+  - [1. Clone Repository](#1-clone-repository)
+  - [2. Start Ollama Server](#2-start-ollama-server)
+  - [3. Configure Environment Variables](#3-configure-environment-variables)
+  - [4. Run Llama Stack with Podman](#4-run-llama-stack-with-podman)
+- [Using the RAG UI](#using-the-rag-ui)
+- [Environment Variables](#environment-variables)
+- [Redeploying Changes](#redeploying-changes)
+- [Troubleshooting](#troubleshooting)
 
-## ✅ 1. Prerequisites
+## Prerequisites
 
-Install the following tools:
-
-- [Podman](https://podman.io/docs/installation)
+- [Podman](https://podman.io/docs/installation) or Docker
 - Python 3.10 or newer
-- [pip](https://pip.pypa.io/en/stable/installation/)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python package manager)
 - [Ollama](https://ollama.com/download)
 
-Verify tools:
+Verify installation:
 
 ```bash
 podman --version
 python3 --version
-pip --version
+uv --version
 ollama --version
 ```
 
-Note: `pip` might become available only after you setup your venv (see below).  Also, `docker` works as well as podman. 
+Note: `uv` is used for fast Python package management and virtual environment handling. Also, `docker` works as well as podman.
 
----
+## Supported Models
 
-## 🚀 2. Start Ollama Server
+| Function    | Model Name                             | Hardware    | Local Support |
+|-------------|----------------------------------------|-------------|---------------|
+| Embedding   | `all-MiniLM-L6-v2`                     | CPU/GPU     | ✓             |
+| Generation  | `meta-llama/Llama-3.2-3B-Instruct`     | CPU/GPU     | ✓             |
+
+Note: Local deployment primarily supports CPU and GPU acceleration through Ollama. The models are automatically downloaded when first requested.
+
+## Installing the RAG QuickStart
+
+### 1. Clone Repository
+
+Clone the repo so you have a working copy
+
+```bash
+git clone https://github.com/rh-ai-quickstart/RAG
+```
+
+### 2. Start Ollama Server
 
 Use the following command to launch the Ollama model:
 
@@ -36,9 +63,7 @@ ollama run llama3.2:3b-instruct-fp16 --keepalive 60m
 
 Note: This will keep the model in memory for 60 minutes.
 
----
-
-## ⚙️ 3. Configure Environment Variables
+### 3. Configure Environment Variables
 
 Launch a new terminal window to set the necessary environment variables:
 
@@ -47,9 +72,7 @@ export INFERENCE_MODEL="meta-llama/Llama-3.2-3B-Instruct"
 export LLAMA_STACK_PORT=8321
 ```
 
----
-
-## 🐳 4. Run Llama Stack with Podman
+### 4. Run Llama Stack with Podman
 
 Pull the Docker image:
 
@@ -91,7 +114,7 @@ Verify the container is running:
 podman ps
 ```
 
-Note:  Another option is to connect to a remote Llama Stack Service.  Based on the instructions of this quickstart, you should have one running in cluster and you can use `oc port-forward` to make it available on localhost.
+Note: Another option is to connect to a remote Llama Stack Service. Based on the instructions of this quickstart, you should have one running in cluster and you can use `oc port-forward` to make it available on localhost.
 
 ```bash
 oc get services -l app.kubernetes.io/name=llamastack
@@ -101,100 +124,55 @@ oc port-forward svc/llamastack 8321:8321
 
 This makes the remote Service available at localhost:8321
 
----
+## Using the RAG UI
 
-## 🐍 5. Set Up Python Environment
-
-Switch over to the `frontend` directory
+1. Navigate to the frontend directory
 
 ```bash
 cd frontend
 ```
 
-Create a Python venv using your Python3.x executable
+2. Run the RAG UI application using the provided start script
 
 ```bash
-python3.11 -m venv .venv
+./start.sh
 ```
 
-Activate the virtual environment:
+This script will automatically:
+- Create a virtual environment (if it doesn't exist)
+- Install/sync all dependencies with `uv sync`
+- Start the Streamlit server with auto-reload enabled
+- Watch for file changes and automatically restart
+
+3. Open your browser to the displayed URL (typically `http://localhost:8501`)
+
+4. Upload your PDF documents through the UI and start asking questions!
+
+## Environment Variables
+
+The RAG UI supports the following optional environment variables for configuration:
+
+| Environment Variable       | Description                                    | Default Value             |
+|----------------------------|------------------------------------------------|---------------------------|
+| `LLAMA_STACK_ENDPOINT`     | The endpoint for the Llama Stack API server    | `http://localhost:8321`   |
+| `FIREWORKS_API_KEY`        | API key for Fireworks AI provider (optional)   | (empty string)            |
+| `TOGETHER_API_KEY`         | API key for Together AI provider (optional)    | (empty string)            |
+| `SAMBANOVA_API_KEY`        | API key for SambaNova provider (optional)      | (empty string)            |
+| `OPENAI_API_KEY`           | API key for OpenAI provider (optional)         | (empty string)            |
+| `TAVILY_SEARCH_API_KEY`    | API key for Tavily search provider (optional)  | (empty string)            |
+
+**Note**: For the default local deployment using Ollama, you typically only need to ensure `LLAMA_STACK_ENDPOINT` points to your running Llama Stack server. The API keys are only needed if you want to use external AI providers instead of the local Ollama setup.
+
+To set environment variables before starting the UI:
 
 ```bash
-source .venv/bin/activate  # macOS/Linux
-# Windows:
-# llama-stack-demo\Scripts\activate
+export LLAMA_STACK_ENDPOINT=http://localhost:8321
+./start.sh
 ```
 
-```bash
-pip install -r requirements.txt
-```
+## Redeploying Changes
 
-Check installation:
-
-```bash
-pip show llama-stack-client
-```
-
-```
-Output
-Name: llama_stack_client
-Version: 0.2.9
-Summary: The official Python library for the llama-stack-client API
-Home-page: https://github.com/meta-llama/llama-stack-client-python
-Author:
-Author-email: Llama Stack Client <dev-feedback@llama-stack-client.com>
-License:
-Location: /Users/bsutter/my-projects/redhat/RAG-Blueprint/frontend/.venv/lib/python3.11/site-packages
-Requires: anyio, click, distro, httpx, pandas, prompt-toolkit, pyaml, pydantic, rich, sniffio, termcolor, tqdm, typing-extensions
-Required-by: llama_stack
-```
-
----
-
-## 📡 6. Configure the Client
-
-Point the client to the local Llama Stack server:
-
-```bash
-llama-stack-client configure --endpoint http://localhost:$LLAMA_STACK_PORT
-```
-
-Hit enter as there is no API key for ollama and this container based Llama Stack server
-
-```
-> Enter the API key (leave empty if no key is needed):
-```
-
-List models:
-
-```bash
-llama-stack-client models list
-```
-
-```
-Output
-Available Models
-
-┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
-┃ model_type        ┃ identifier                                         ┃ provider_resource_id                    ┃ metadata                                        ┃ provider_id       ┃
-┡━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
-│ embedding         │ all-MiniLM-L6-v2                                   │ all-minilm:latest                       │ {'embedding_dimension': 384.0}                  │ ollama            │
-├───────────────────┼────────────────────────────────────────────────────┼─────────────────────────────────────────┼─────────────────────────────────────────────────┼───────────────────┤
-│ llm               │ meta-llama/Llama-3.2-3B-Instruct                   │ llama3.2:3b-instruct-fp16               │                                                 │ ollama            │
-└───────────────────┴────────────────────────────────────────────────────┴─────────────────────────────────────────┴─────────────────────────────────────────────────┴───────────────────┘
-
-Total models: 2
-```
-
-## 7. Run the RAG UI
-
-```bash
-streamlit run llama_stack/distribution/ui/app.py
-```
-
-## 8. Redeploy changes
-
-Deployment after making changes requires a rebuild of the container image using either `docker` or `podman`.  Replace `docker.io` with your target container registry such as `quay.io`.
+Deployment after making changes requires a rebuild of the container image using either `docker` or `podman`. Replace `docker.io` with your target container registry such as `quay.io`.
 
 Note: Use your favorite repository, organization and image name
 
@@ -205,33 +183,36 @@ export IMAGE_NAME=rag
 export IMAGE_TAG=1.0.0
 ```
 
+Build the image:
+
 ```bash
 podman buildx build --platform linux/amd64,linux/arm64 -t $CONTAINER_REGISTRY/$CONTAINER_ORGANIZATION/$IMAGE_NAME:$IMAGE_TAG -f Containerfile .
 ```
+
+Login to registry:
 
 ```bash
 podman login $CONTAINER_REGISTRY
 ```
 
+Push the image:
+
 ```bash
 podman push $CONTAINER_REGISTRY/$CONTAINER_ORGANIZATION/$IMAGE_NAME:$IMAGE_TAG
 ```
 
-Add modification to `deploy/helm/rag/values.yaml`, replacing the placeholders with your values
+Add modification to `deploy/helm/rag/values.yaml`, replacing the placeholders with your values:
 
-```
+```yaml
 image:
   repository: {CONTAINER_REGISTRY}/{CONTAINER_ORGANIZATION}/{IMAGE_NAME}
   pullPolicy: IfNotPresent
   tag: {IMAGE_TAG}
 ```
 
- To redeploy to the cluster run the same `make` command as you did before.
+To redeploy to the cluster run the same `make` command as you did before.
 
-
----
-
-## Troubleshooting Tips
+## Troubleshooting
 
 **Check if Podman is running:**
 
@@ -239,32 +220,34 @@ image:
 podman ps
 ```
 
-**Activate your virtual environment:**
+**Reinstall dependencies if needed:**
 
 ```bash
-source .venv/bin/activate
-```
-
-**Reinstall the client if needed:**
-
-```bash
-pip uninstall llama-stack-client
-pip install llama-stack-client
+uv sync --reinstall
 ```
 
 **Test the client in Python:**
 
 ```bash
-python -c "from llama_stack_client import LlamaStackClient; print(LlamaStackClient)"
+uv run python -c "from llama_stack_client import LlamaStackClient; print(LlamaStackClient)"
 ```
 
-## 10. Running the GUI locally
+**Check uv environment:**
 
 ```bash
-cd llama_stack/distribution/ui/
+uv pip list
 ```
 
+**Run commands in the uv environment:**
+
 ```bash
-streamlit run app.py
+uv run <command>
+```
+
+**Reset the entire environment:**
+
+```bash
+rm -rf .venv
+uv sync
 ```
 
