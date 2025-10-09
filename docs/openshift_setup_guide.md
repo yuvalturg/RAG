@@ -12,11 +12,20 @@ This guide will outline the necessary steps for deploying and running the RAG Qu
   - [3. Hardware Configuration](#3-hardware-configuration)
   - [4. Navigate to Deployment Directory](#4-navigate-to-deployment-directory)
   - [5. List Available Models](#5-list-available-models)
-  - [6. Deploy with Helm](#6-deploy-with-helm)
-  - [7. Monitor Deployment](#7-monitor-deployment)
-  - [8. Verify Installation](#8-verify-installation)
+  - [6. Initialize Configuration (Recommended for Fine-Grained Control)](#6-initialize-configuration-recommended-for-fine-grained-control)
+  - [7. Deploy with Helm](#7-deploy-with-helm)
+    - [Option A: Deploy with Configuration File (Recommended)](#option-a-deploy-with-configuration-file-recommended)
+    - [Option B: Deploy with Command-Line Parameters](#option-b-deploy-with-command-line-parameters)
+  - [8. Monitor Deployment](#8-monitor-deployment)
+  - [9. Verify Installation](#9-verify-installation)
+    - [Verify OpenShift AI Dashboard](#verify-openshift-ai-dashboard)
+    - [Configure Kubeflow Pipelines (Optional - for Batch Document Ingestion)](#configure-kubeflow-pipelines-optional---for-batch-document-ingestion)
+    - [Verify Embeddings in PGVector (Optional)](#verify-embeddings-in-pgvector-optional)
 - [Using the RAG UI](#using-the-rag-ui)
 - [Environment Variables](#environment-variables)
+  - [RAG UI Environment Variables](#rag-ui-environment-variables)
+  - [Llama Stack Environment Variables](#llama-stack-environment-variables)
+  - [Configuring Environment Variables](#configuring-environment-variables)
 - [Adding a new model](#adding-a-new-model)
 - [Uninstalling the RAG QuickStart](#uninstalling-the-rag-quickstart)
 
@@ -121,23 +130,93 @@ model: llama-guard-3-8b (meta-llama/Llama-Guard-3-8B)
 
 The "guard" models can be used to test shields for profanity, hate speech, violence, etc.
 
-### 6. Deploy with Helm
+### 6. Initialize Configuration (Recommended for Fine-Grained Control)
 
-Install via make
+You can configure your deployment in two ways:
+1. **Using a configuration file** (recommended for complex setups, multiple models, or persistent configuration)
+2. **Using command-line parameters** (quick deployments, see step 7 Option B)
 
-Use the taint key from above as the `LLM_TOLERATION` and `SAFETY_TOLERATION`
+To use the configuration file approach, initialize it. This will create a `rag-values.yaml` file from the example template:
 
-The namespace will be auto-created
+```bash
+make init-config
+```
+
+The system will display a configuration banner prompting you to edit the file. Open a new terminal window and edit the configuration:
+
+```bash
+# Edit with your preferred editor
+nano rag-values.yaml
+# or
+vim rag-values.yaml
+```
+
+**Important**: You MUST configure at least:
+
+1. **Enable at least ONE model** in the `global.models` section by setting `enabled: true`
+2. **Add your Hugging Face token** (get it from https://huggingface.co/settings/tokens)
+3. **(Optional)** Add your TAVILY API key for web search functionality
+4. **(Optional)** Configure tolerations if your nodes are tainted (see step 3)
+
+**Example model configuration:**
+```yaml
+global:
+  models:
+    llama-3-2-3b-instruct:
+      id: meta-llama/Llama-3.2-3B-Instruct
+      enabled: true
+      device: "gpu"  # Options: "cpu", "gpu", "hpu"
+      resources:
+        limits:
+          nvidia.com/gpu: "1"
+      tolerations:
+      - key: "nvidia.com/gpu"
+        operator: Exists
+        effect: NoSchedule
+```
+
+**Quick configuration commands:**
+```bash
+# Interactively configure API keys
+make configure-keys
+
+# View current configuration
+make show-config
+
+# Validate configuration
+make validate-config
+```
+
+### 7. Deploy with Helm
+
+There are two ways to deploy: using the configuration file or using command-line parameters.
+
+#### Option A: Deploy with Configuration File (Recommended)
+
+After configuring the `rag-values.yaml` file in step 6, deploy using make:
+
+```bash
+make install NAMESPACE=llama-stack-rag
+```
+
+The system will:
+1. Validate your configuration
+2. Prompt for any missing API keys (Hugging Face token, TAVILY key)
+3. Deploy all configured services using the models and settings from `rag-values.yaml`
+
+#### Option B: Deploy with Command-Line Parameters
+
+You can also deploy by passing configuration parameters directly via the command line. This approach is useful for quick deployments or CI/CD pipelines.
 
 **GPU Deployment Examples (Default):**
 
-To install only the RAG example, no shields, use the following command:
+To install only the RAG example, no shields:
 
 ```bash
 make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct LLM_TOLERATION="nvidia.com/gpu"
 ```
 
-To install both the RAG example as well as the guard model to allow for shields, use the following command:
+To install both the RAG example and the guard model for shields:
 
 ```bash
 make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct LLM_TOLERATION="nvidia.com/gpu" SAFETY=llama-guard-3-8b SAFETY_TOLERATION="nvidia.com/gpu"
@@ -182,11 +261,13 @@ make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct SAFETY=llama-gu
 make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct SAFETY=llama-guard-3-8b DEVICE=cpu
 ```
 
-When prompted, enter your **[Hugging Face Token]((https://huggingface.co/settings/tokens))**.
+**Note**: When using command-line parameters, the `rag-values.yaml` file will still be created from the example template if it doesn't exist. Command-line parameters will override the model settings in the values file.
 
-Note: This process may take 10 to 30 minutes depending on the number and size of models to be downloaded. 
+When prompted, enter your **[Hugging Face Token](https://huggingface.co/settings/tokens)**.
 
-### 7. Monitor Deployment
+This process may take 10 to 30 minutes depending on the number and size of models to be downloaded.
+
+### 8. Monitor Deployment
 
 Watch/Monitor
 
@@ -221,7 +302,7 @@ rag-pipeline-notebook-0                                            2/2     Runni
 upload-sample-docs-job-f5k5w                                       0/1     Completed   0          10m
 ```
 
-8. Verify:
+Verify deployment:
 
 ```bash
 oc get pods -n llama-stack-rag
@@ -245,7 +326,7 @@ oc get inferenceservice llama-3-2-3b-instruct \
   -o jsonpath='{.spec.predictor.model}' | jq
 ```
 
-### 8. Verify Installation
+### 9. Verify Installation
 
 Watch the **llamastack** pod as that one becomes available after all the model servers are up.
 
@@ -410,7 +491,7 @@ open $URL
 
 ![RAG UI Main 4](./docs/img/rag-ui-4.png)
 
-For batch document ingestion using Kubeflow Pipelines, refer to the [Verify Installation](#8-verify-installation) section above.
+For batch document ingestion using Kubeflow Pipelines, refer to the [Verify Installation](#9-verify-installation) section above.
 
 ## Environment Variables
 
@@ -459,9 +540,9 @@ After modifying the values, redeploy using the same `make install` command.
 ## Adding a new model
 To add another model follow these steps:
 
-1. Edit `deploy\helm\rag\values.yaml` 
+1. Edit `deploy/helm/rag-values.yaml` (your configuration file)
 
-    Update the **global\models** section
+    Update the **global.models** section
     ```yaml
     global:
       models:
