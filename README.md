@@ -31,7 +31,7 @@ This QuickStart allows users to explore the capabilities of RAG by:
 
 
 ### Architecture diagrams
-![RAG System Architecture](docs/img/rag-architecture-new.png)
+![RAG System Architecture](docs/images/rag-architecture-new.png)
 
 *This diagram illustrates both the ingestion pipeline for document processing and the RAG pipeline for query handling. For more details click [here](docs/rag-reference-architecture.md).*
 
