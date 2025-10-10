@@ -346,13 +346,13 @@ oc get routes rhods-dashboard -n redhat-ods-applications
 
 2. Login to the OpenShift AI Dashboard and find the `llama-stack-rag` project.
 
-![Data Science Project 1](img/rhoai-project-1.png)
+![Data Science Project 1](images/rhoai-project-1.png)
 
-![Data Science Project 2](img/rhoai-project-2.png)
+![Data Science Project 2](images/rhoai-project-2.png)
 
 3. You should see a running workbench with Jupyter Notebook.
 
-![Workbench UI](img/workbench.png)
+![Workbench UI](images/workbench.png)
 
 #### Configure Kubeflow Pipelines (Optional - for Batch Document Ingestion)
 
@@ -384,7 +384,7 @@ Navigate to Kubeflow Pipelines in OpenShift AI and configure with these values:
 - **Region**: `us-east-1`
 - **Bucket**: `documents`
 
-![KFP Configure](img/kfp-configure.png)
+![KFP Configure](images/kfp-configure.png)
 
 **Using MinIO CLI (optional):**
 
@@ -421,15 +421,15 @@ open $MINIO_WEB
 
 Once configured, you can run the ingestion pipeline from the Jupyter notebook:
 
-![Jupyter Notebook](img/jupyter-nb.png)
+![Jupyter Notebook](images/jupyter-nb.png)
 
 This will create pipelines and runs in Kubeflow:
 
-![KFP Pipeline](img/kfp-pipeline.png)
+![KFP Pipeline](images/kfp-pipeline.png)
 
-![KFP Run](img/kfp-run.png)
+![KFP Run](images/kfp-run.png)
 
-![KFP Logs](img/kfp-logs.png)
+![KFP Logs](images/kfp-logs.png)
 
 #### Verify Embeddings in PGVector (Optional)
 
@@ -473,7 +473,7 @@ echo $URL
 open $URL
 ```
 
-![RAG UI Main](./img/rag-ui-1.png)
+![RAG UI Main](./images/rag-ui-1.png)
 
 2. Click on **Upload Documents**
 
@@ -481,15 +481,15 @@ open $URL
 
 4. Name and Create a Vector Database
 
-![RAG UI Main 2](./img/rag-ui-2.png)
+![RAG UI Main 2](./images/rag-ui-2.png)
 
 5. Once you've recieved **Vector database created successfully!**, navigate back to **Chat** and select the newly created vector db.
 
-![RAG UI Main 3](./img/rag-ui-3.png)
+![RAG UI Main 3](./images/rag-ui-3.png)
 
 6. Ask a question pertaining to your document!
 
-![RAG UI Main 4](./img/rag-ui-4.png)
+![RAG UI Main 4](./images/rag-ui-4.png)
 
 For batch document ingestion using Kubeflow Pipelines, refer to the [Verify Installation](#9-verify-installation) section above.
 
@@ -617,11 +617,11 @@ To add another model follow these steps:
 
 Return to the RAG UI and look into the **Inspect** tab to see the additional models and shields. 
 
-![RAG UI Main 5](./img/rag-ui-5.png)
+![RAG UI Main 5](./images/rag-ui-5.png)
 
 The newly added shield can be tested via the UI by selecting **Agent-based** and Chat
 
-![RAG UI Main 6](./img/rag-ui-6.png)
+![RAG UI Main 6](./images/rag-ui-6.png)
 
 
 
