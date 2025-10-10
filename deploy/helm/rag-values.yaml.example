@@ -161,9 +161,8 @@ ingestion-pipeline:
 replicaCount: 1
 
 image:
-  repository: "quay.io/ecosystem-appeng/llamastack-dist-ui"
-  pullPolicy: "IfNotPresent"
-  tag: "0.2.9"
+  repository: "quay.io/rh-ai-quickstart/llamastack-dist-ui"
+  pullPolicy: "Always"
 
 env:
   - name: "LLAMA_STACK_ENDPOINT"

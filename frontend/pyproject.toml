@@ -6,14 +6,14 @@ authors = [
     { name = "Saurabh Agarwal", email = "sauagarw@redhat.com" }
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "streamlit",
     "pandas",
-    "llama-stack-client==0.2.9",
+    "llama-stack-client==__LLAMASTACK_VERSION__",
     "requests",
     "streamlit-option-menu",
-    "llama-stack==0.2.9",
+    "llama-stack==__LLAMASTACK_VERSION__",
     "fire",
 ]
 

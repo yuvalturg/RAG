@@ -19,7 +19,7 @@ PROJECT_NAME := rag
 OLLAMA_MODEL := llama3.2:1b-instruct-fp16
 
 # UI Build Configuration
-VERSION ?= 0.2.9
+VERSION ?= 0.2.22
 TAVILY_SEARCH_API_KEY ?= ""
 CONTAINER_REGISTRY ?= quay.io/rh-ai-quickstart
 DIST_UI_DIR := $(abspath ../../frontend)
@@ -255,8 +255,7 @@ dev: ## Start backend services in containers and run UI locally for development
 	echo ""; \
 	echo "$(BLUE)[INFO]$(NC) Starting RAG UI locally for development..."; \
 	cd ../../frontend && \
-	uv sync && \
-	TAVILY_SEARCH_API_KEY="$$TAVILY_KEY" uv run streamlit run llama_stack_ui/distribution/ui/app.py --server.runOnSave true --server.fileWatcherType auto
+	VERSION=$(VERSION) TAVILY_SEARCH_API_KEY="$$TAVILY_KEY" ./start.sh
 
 
 
