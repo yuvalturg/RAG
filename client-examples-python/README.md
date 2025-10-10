@@ -135,7 +135,7 @@ python rag-delete-vector-db.py
 
 The postgresql pod and terminal is accessible via the OpenShift console.
 
-![psql 1](../docs/img/psql-pgvector-1.png)
+![psql 1](../docs/images/psql-pgvector-1.png)
 
 You may need to hit enter for the prompt to appear.
 

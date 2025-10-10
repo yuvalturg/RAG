@@ -1,28 +1,37 @@
 <!-- omit from toc -->
-# RAG QuickStart
+# Centralize company knowledge with an Enterprise RAG Chatbot
+
+Empower employees with fast, accurate HR, procurement, sales, and IT answers through a secure, centralized Retrieval Augmented Generation chatbot.
+
+<!-- omit from toc -->
+## Table of Contents
+- [Detailed description](#detailed-description)
+  - [Architecture diagrams](#architecture-diagrams)
+- [Requirements](#requirements)
+- [Deploy](#deploy)
+  - [Prerequisites](#prerequisites)
+  - [Supported Models](#supported-models)
+  - [Installation Steps](#installation-steps)
+  - [Local Deployment](#local-deployment)
+
+
+## Detailed description
+
+See how FantaCo, a fictional large enterprise, launched a secure RAG chatbot that connects employees to internal HR, procurement, sales, and IT documentation. From policies to startup guides, employees get fast, accurate answers through a single chat interface. Advanced users can extend the experience with AI agents for deeper workflows. 
 
 Retrieval-Augmented Generation (RAG) enhances Large Language Models (LLMs) by retrieving relevant external knowledge to improve accuracy, reduce hallucinations, and support domain-specific conversations.
 
 This QuickStart allows users to explore the capabilities of RAG by:
-- Uploading documents to be embedded
-- Tweaking sampling parameters to influence LLM responses.
+- exploring FantaCo's solution
+- Uploading new documents to be embedded
+- Tweaking sampling parameters to influence LLM responses
 - Using custom system prompts
 - Switching between simple and agent based RAG
-- Switching between standard agents and ReAct agents.
-<!-- omit from toc -->
-## Table of Contents
-- [Architecture](#architecture)
-- [OpenShift Installation](#openshift-installation)
-  - [Prerequisites](#prerequisites)
-  - [Supported Models](#supported-models)
-  - [Installation Steps](#installation-steps)
-- [Local Deployment](#local-deployment)
+- Switching between standard agents and ReAct agents
 
 
-
-
-## Architecture
-![RAG System Architecture](docs/img/rag-architecture-new.png)
+### Architecture diagrams
+![RAG System Architecture](docs/images/rag-architecture-new.png)
 
 *This diagram illustrates both the ingestion pipeline for document processing and the RAG pipeline for query handling. For more details click [here](docs/rag-reference-architecture.md).*
 
@@ -40,7 +49,21 @@ This QuickStart allows users to explore the capabilities of RAG by:
 | **Data Ingestion** | Kubeflow Pipelines | Multi-modal data ingestion with preprocessing pipelines for cleaning, chunking, and embedding generation |
 | **Storage** | S3 Bucket | Document source for enterprise content |
 
-## OpenShift Installation
+
+## Requirements 
+
+### Minimum hardware requirements 
+
+### Minimum software requirements 
+
+### Required user permissions 
+
+
+## Deploy
+
+*The instructions below will deploy this quickstart to your OpenShift environment.*
+
+*Please see the [local deployments](#local-deployment) section for additional deployment options.* 
 
 ### Prerequisites
 
@@ -227,6 +250,12 @@ oc get routes -n llama-stack-rag
 
 For detailed post-installation verification, configuration options, and usage instructions, see the [complete OpenShift deployment guide](docs/openshift_setup_guide.md).
 
-## Local Deployment
+### Local Deployment
 
 For local development and testing, see the [Local Setup Guide](docs/local_setup_guide.md).
+
+## Tags 
+
+* **Industry:** Cross-industry
+* **Product:** OpenShift AI 
+* **Use case:** RAG
