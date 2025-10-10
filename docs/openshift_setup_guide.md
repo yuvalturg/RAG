@@ -473,7 +473,7 @@ echo $URL
 open $URL
 ```
 
-![RAG UI Main](./docs/img/rag-ui-1.png)
+![RAG UI Main](./img/rag-ui-1.png)
 
 2. Click on **Upload Documents**
 
@@ -481,15 +481,15 @@ open $URL
 
 4. Name and Create a Vector Database
 
-![RAG UI Main 2](./docs/img/rag-ui-2.png)
+![RAG UI Main 2](./img/rag-ui-2.png)
 
 5. Once you've recieved **Vector database created successfully!**, navigate back to **Chat** and select the newly created vector db.
 
-![RAG UI Main 3](./docs/img/rag-ui-3.png)
+![RAG UI Main 3](./img/rag-ui-3.png)
 
 6. Ask a question pertaining to your document!
 
-![RAG UI Main 4](./docs/img/rag-ui-4.png)
+![RAG UI Main 4](./img/rag-ui-4.png)
 
 For batch document ingestion using Kubeflow Pipelines, refer to the [Verify Installation](#9-verify-installation) section above.
 
@@ -617,11 +617,11 @@ To add another model follow these steps:
 
 Return to the RAG UI and look into the **Inspect** tab to see the additional models and shields. 
 
-![RAG UI Main 5](./docs/img/rag-ui-5.png)
+![RAG UI Main 5](./img/rag-ui-5.png)
 
 The newly added shield can be tested via the UI by selecting **Agent-based** and Chat
 
-![RAG UI Main 6](./docs/img/rag-ui-6.png)
+![RAG UI Main 6](./img/rag-ui-6.png)
 
 
 
