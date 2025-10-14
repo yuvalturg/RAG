@@ -122,6 +122,12 @@ global:
   models: {}
   mcp-servers: {}
 
+# Hugging Face Token for model downloads
+llm-service:
+  secret:
+    hf_token: ""
+    enabled: true
+
 pgvector:
   secret:
     user: postgres

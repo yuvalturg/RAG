@@ -8,9 +8,15 @@
 
 # Hugging Face Token (required for model downloads)
 # Get your token from: https://huggingface.co/settings/tokens
-hf_token: ""
+# Set this in the llm-service.secret.hf_token field below
 
 # TAVILY Search API Key is configured in the llama-stack.secrets section below
+
+# LLM Service Configuration
+llm-service:
+  secret:
+    hf_token: ""
+    enabled: true
 
 # Global model configuration
 global:
