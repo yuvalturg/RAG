@@ -1,12 +1,15 @@
 # Makefile for RAG Deployment
 # Replaces the original deploy.sh script with additional uninstall functionality
 
-# Color definitions
-BLUE := \033[0;34m
-GREEN := \033[0;32m
-YELLOW := \033[0;33m
-RED := \033[0;31m
-NC := \033[0m # No Color
+# Use bash if available, otherwise use sh
+SHELL := $(shell which bash 2>/dev/null || which sh)
+
+# Color definitions (using tput for better portability, fallback to ANSI)
+BLUE := $(shell tput setaf 4 2>/dev/null || echo '\033[0;34m')
+GREEN := $(shell tput setaf 2 2>/dev/null || echo '\033[0;32m')
+YELLOW := $(shell tput setaf 3 2>/dev/null || echo '\033[0;33m')
+RED := $(shell tput setaf 1 2>/dev/null || echo '\033[0;31m')
+NC := $(shell tput sgr0 2>/dev/null || echo '\033[0m')
 
 # NAMESPACE check will be done in individual targets that need it
 
@@ -46,18 +49,18 @@ define check_values_file
 			echo -e "$(GREEN)║  $(YELLOW)Before continuing, you MUST configure at least:$(GREEN)                         ║$(NC)"; \
 			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
 			echo -e "$(GREEN)║  $(RED)1. Enable at least ONE model$(GREEN) in the global.models section               ║$(NC)"; \
-			echo -e "$(GREEN)║     $(NC)Set $(BLUE)enabled: true$(NC) for your chosen model$(GREEN)                            ║$(NC)"; \
+			echo -e "$(GREEN)║     $(NC)Set $(BLUE)enabled: true$(NC) for your chosen model$(GREEN)                              ║$(NC)"; \
 			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
 			echo -e "$(GREEN)║  $(YELLOW)2. Add your Hugging Face token$(GREEN) (required for model downloads)           ║$(NC)"; \
-			echo -e "$(GREEN)║     $(NC)Get token from: $(BLUE)https://huggingface.co/settings/tokens$(GREEN)              ║$(NC)"; \
+			echo -e "$(GREEN)║     $(NC)Get token from: $(BLUE)https://huggingface.co/settings/tokens$(GREEN)               ║$(NC)"; \
 			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
-			echo -e "$(GREEN)║  $(YELLOW)3. (Optional)$(NC) Add TAVILY API key for web search functionality$(GREEN)          ║$(NC)"; \
+			echo -e "$(GREEN)║  $(YELLOW)3. (Optional)$(NC) Add TAVILY API key for web search functionality$(GREEN)           ║$(NC)"; \
 			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
 			echo -e "$(GREEN)║  $(BLUE)📝 ACTION REQUIRED:$(GREEN)                                                     ║$(NC)"; \
-			echo -e "$(GREEN)║     $(NC)Open a new terminal window and edit the configuration file:$(GREEN)         ║$(NC)"; \
+			echo -e "$(GREEN)║     $(NC)Open a new terminal window and edit the configuration file:$(GREEN)          ║$(NC)"; \
 			echo -e "$(GREEN)║     $(BLUE)nano rag-values.yaml$(GREEN)  or  $(BLUE)vim rag-values.yaml$(GREEN)                        ║$(NC)"; \
 			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
-			echo -e "$(GREEN)║     $(NC)After editing, save the file and return here to continue.$(GREEN)           ║$(NC)"; \
+			echo -e "$(GREEN)║     $(NC)After editing, save the file and return here to continue.$(GREEN)            ║$(NC)"; \
 			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
 			echo -e "$(GREEN)╚══════════════════════════════════════════════════════════════════════════╝$(NC)"; \
 			echo -e ""; \
