@@ -19,7 +19,7 @@ MAKEFLAGS += --no-print-directory
 .DEFAULT_GOAL := help
 
 # Default values
-VERSION ?= 0.2.22
+VERSION ?= 0.2.17
 POSTGRES_USER ?= postgres
 POSTGRES_PASSWORD ?= rag_password
 POSTGRES_DBNAME ?= rag_blueprint
