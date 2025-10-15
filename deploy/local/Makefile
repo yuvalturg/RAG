@@ -19,7 +19,7 @@ PROJECT_NAME := rag
 OLLAMA_MODEL := llama3.2:1b-instruct-fp16
 
 # UI Build Configuration
-VERSION ?= 0.2.22
+VERSION ?= 0.2.17
 TAVILY_SEARCH_API_KEY ?= ""
 CONTAINER_REGISTRY ?= quay.io/rh-ai-quickstart
 DIST_UI_DIR := $(abspath ../../frontend)

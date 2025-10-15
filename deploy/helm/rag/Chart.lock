@@ -13,12 +13,12 @@ dependencies:
   version: 0.1.0
 - name: ingestion-pipeline
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-  version: 0.2.22
+  version: 0.2.18
 - name: llama-stack
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-  version: 0.2.22
+  version: 0.2.18
 - name: mcp-servers
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
   version: 0.1.0
-digest: sha256:372e06681f15c7bee7acd28b8f8492df6ca0e313d19d84017249cba525bfe54e
-generated: "2025-10-10T15:59:42.583701-04:00"
+digest: sha256:182c0c03a69774f307a5ca43be949df83cf9efdf8ee9d29f2935c96e61426c2f
+generated: "2025-10-14T18:37:33.631615-04:00"
