@@ -1,7 +1,7 @@
 <!-- omit from toc -->
 # Centralize company knowledge with an Enterprise RAG Chatbot
 
-Empower employees with fast, accurate HR, procurement, sales, and IT answers through a secure, centralized Retrieval Augmented Generation chatbot.
+Use retrieval-augmented generation (RAG) to enhance large language models with specialized data sources for more accurate and context-aware responses.
 
 <!-- omit from toc -->
 ## Table of Contents
