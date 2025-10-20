@@ -505,7 +505,7 @@ install: ## Install the RAG deployment
 	fi; \
 	if [ -n "$(HF_TOKEN)" ]; then \
 		echo -e "$(BLUE)[INFO]$(NC) Setting HF_TOKEN from command line"; \
-		HELM_ARGS="$$HELM_ARGS --set llm-service.secret.hf_token='$(HF_TOKEN)'"; \
+		HELM_ARGS="$$HELM_ARGS --set llm-service.secret.hf_token=$(HF_TOKEN)"; \
 	fi; \
 	if [ -n "$(RAW_DEPLOYMENT)" ]; then \
 		echo -e "$(BLUE)[INFO]$(NC) Setting raw deployment mode: $(RAW_DEPLOYMENT)"; \
