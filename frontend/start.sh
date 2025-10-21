@@ -3,7 +3,7 @@
 cd "$(dirname "$0")"
 
 # Set default VERSION if not provided
-VERSION=${VERSION:-0.2.17}
+VERSION=${VERSION:-0.2.22}
 
 # Replace __LLAMASTACK_VERSION__ with actual version in pyproject.toml
 echo "Replacing __LLAMASTACK_VERSION__ with $VERSION in pyproject.toml"

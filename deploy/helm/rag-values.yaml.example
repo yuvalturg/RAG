@@ -144,24 +144,72 @@ llama-stack:
 
 # Ingestion Pipeline Configuration
 ingestion-pipeline:
-  defaultPipeline:
-    enabled: true
-    # Source options: [S3, URL]
-    source: "S3"
-    # Embedding model for creating embeddings
-    embedding_model: "all-MiniLM-L6-v2"
-    # Name of the vector database
-    name: "zippity-zoo-vector-db"
-    # Version of the knowledge base
-    version: "1.0"
+  pipelines:
+    # GitHub-based pipeline
+    hr-pipeline:
+      enabled: true
+      source: GITHUB
+      embedding_model: "all-MiniLM-L6-v2"
+      name: "hr-vector-db"
+      version: "1.0"
+      vector_store_name: "hr-vector-db-v1-0"
+      GITHUB:
+        url: https://github.com/rh-ai-quickstart/RAG.git
+        path: notebooks/hr
+        token: auth_token
+        branch: main
 
-    # S3 configuration for document storage
-    S3:
-      access_key_id: "minio_rag_user"
-      secret_access_key: "minio_rag_password"
-      bucket_name: "documents"
-      endpoint_url: "http://minio:9000"
-      region: "us-east-1"
+    legal-pipeline:
+      enabled: true
+      source: GITHUB
+      embedding_model: "all-MiniLM-L6-v2"
+      name: "legal-vector-db"
+      version: "1.0"
+      vector_store_name: "legal-vector-db-v1-0"
+      GITHUB:
+        url: https://github.com/rh-ai-quickstart/RAG.git
+        path: notebooks/legal
+        token: auth_token
+        branch: main
+
+    sales-pipeline:
+      enabled: true
+      source: GITHUB
+      embedding_model: "all-MiniLM-L6-v2"
+      name: "sales-vector-db"
+      version: "1.0"
+      vector_store_name: "sales-vector-db-v1-0"
+      GITHUB:
+        url: https://github.com/rh-ai-quickstart/RAG.git
+        path: notebooks/sales
+        token: auth_token
+        branch: main
+
+    procurement-pipeline:
+      enabled: true
+      source: GITHUB
+      embedding_model: "all-MiniLM-L6-v2"
+      name: "procurement-vector-db"
+      version: "1.0"
+      vector_store_name: "procurement-vector-db-v1-0"
+      GITHUB:
+        url: https://github.com/rh-ai-quickstart/RAG.git
+        path: notebooks/procurement
+        token: auth_token
+        branch: main
+
+    techsupport-pipeline:
+      enabled: true
+      source: GITHUB
+      embedding_model: "all-MiniLM-L6-v2"
+      name: "techsupport-vector-db"
+      version: "1.0"
+      vector_store_name: "techsupport-vector-db-v1-0"
+      GITHUB:
+        url: https://github.com/rh-ai-quickstart/RAG.git
+        path: notebooks/techsupport
+        token: auth_token
+        branch: main
 
 # UI Configuration
 replicaCount: 1

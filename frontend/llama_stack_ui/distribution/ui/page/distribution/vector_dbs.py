@@ -20,6 +20,6 @@ def vector_dbs():
         st.info("No vector databases found.")
         return
     # Build info dict and allow selection
-    vdb_info = {v.identifier: v.to_dict() for v in vdb_list}
+    vdb_info = {v.vector_db_name: v.to_dict() for v in vdb_list}
     selected_vector_db = st.selectbox("Select a vector database", list(vdb_info.keys()))
     st.json(vdb_info[selected_vector_db], expanded=True)
