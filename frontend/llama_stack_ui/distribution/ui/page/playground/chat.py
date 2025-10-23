@@ -125,10 +125,10 @@ def tool_chat_page():
             vector_dbs = llama_stack_api.client.vector_dbs.list() or []
             if not vector_dbs:
                 st.info("No vector databases available for selection.")
-            vector_dbs = [vector_db.identifier for vector_db in vector_dbs]
+            vector_db_names = [vector_db.vector_db_name for vector_db in vector_dbs]
             selected_vector_dbs = st.multiselect(
                 label="Select Document Collections to use in RAG queries",
-                options=vector_dbs,
+                options=vector_db_names,
                 on_change=reset_agent,
             )
         if processing_mode == "Agent-based":
@@ -147,10 +147,10 @@ def tool_chat_page():
                 vector_dbs = llama_stack_api.client.vector_dbs.list() or []
                 if not vector_dbs:
                     st.info("No vector databases available for selection.")
-                vector_dbs = [vector_db.identifier for vector_db in vector_dbs]
+                vector_db_names = [vector_db.vector_db_name for vector_db in vector_dbs]
                 selected_vector_dbs = st.multiselect(
                     label="Select Document Collections to use in RAG queries",
-                    options=vector_dbs,
+                    options=vector_db_names,
                     on_change=reset_agent,
                 )
 
@@ -182,19 +182,19 @@ def tool_chat_page():
                     for idx, tool in enumerate(tools, start=1):
                         st.markdown(f"{idx}. `{tool.split(':')[-1]}`")
 
-            st.subheader("Agent Configurations")
-            st.subheader("Agent Type")
-            agent_type = st.radio(
-                label="Select Agent Type",
-                options=["Regular", "ReAct"],
-                on_change=reset_agent,
-            )
+            # st.subheader("Agent Configurations")
+            # st.subheader("Agent Type")
+            # agent_type = st.radio(
+            #     label="Select Agent Type",
+            #     options=["Regular", "ReAct"],
+            #     on_change=reset_agent,
+            # )
 
-            if agent_type == "ReAct":
-                agent_type = AgentType.REACT
-            else:
-                agent_type = AgentType.REGULAR
-
+            # if agent_type == "ReAct":
+            #     agent_type = AgentType.REACT
+            # else:
+            #     agent_type = AgentType.REGULAR
+            agent_type = AgentType.REGULAR
         
         if processing_mode == "Agent-based":
             input_shields = []
@@ -234,10 +234,12 @@ def tool_chat_page():
         for i, tool_name in enumerate(toolgroup_selection):
             if tool_name == "builtin::rag":
                 if len(selected_vector_dbs) > 0:
+                    vector_dbs = llama_stack_api.client.vector_dbs.list() or []
+                    vector_db_ids = [vector_db.identifier for vector_db in vector_dbs if vector_db.vector_db_name in selected_vector_dbs]
                     tool_dict = dict(
                         name="builtin::rag",
                         args={
-                            "vector_db_ids": list(selected_vector_dbs),
+                            "vector_db_ids": list(vector_db_ids),
                         },
                     )
                     updated_toolgroup_selection.append(tool_dict)
@@ -496,10 +498,12 @@ def tool_chat_page():
     def direct_process_prompt(prompt, debug_events_list):
         # Query the vector DB
         if selected_vector_dbs:
+            vector_dbs = llama_stack_api.client.vector_dbs.list() or []
+            vector_db_ids = [vector_db.identifier for vector_db in vector_dbs if vector_db.vector_db_name in selected_vector_dbs]
             with st.spinner("Retrieving context (RAG)..."):
                 try:
                     rag_response = llama_stack_api.client.tool_runtime.rag_tool.query(
-                        content=prompt, vector_db_ids=list(selected_vector_dbs) 
+                        content=prompt, vector_db_ids=list(vector_db_ids)
                     )
                     prompt_context = rag_response.content
                     debug_events_list.append({

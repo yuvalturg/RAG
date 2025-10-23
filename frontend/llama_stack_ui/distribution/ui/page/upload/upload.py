@@ -1,7 +1,8 @@
 import streamlit as st
-from llama_stack_client import RAGDocument
 from modules.api import llama_stack_api
 from modules.utils import data_url_from_file
+from llama_stack_client import RAGDocument
+
 
 def upload_page():
     """
@@ -41,18 +42,20 @@ def upload_page():
             for x in providers:
                 if x.api == "vector_io":
                     vector_io_provider = x.provider_id
+                    break
 
             # Register new vector database
-            llama_stack_api.client.vector_dbs.register(
+            vector_db = llama_stack_api.client.vector_dbs.register(
                 vector_db_id=vector_db_name,
                 embedding_dimension=384,
                 embedding_model="all-MiniLM-L6-v2",
                 provider_id=vector_io_provider,
             )
+            vector_db_id = vector_db.identifier
 
             # Insert documents into the vector database
             llama_stack_api.client.tool_runtime.rag_tool.insert(
-                vector_db_id=vector_db_name,
+                vector_db_id=vector_db_id,
                 documents=documents,
                 chunk_size_in_tokens=512,
             )
@@ -60,4 +63,6 @@ def upload_page():
             # Reset form fields
             uploaded_files.clear()
             vector_db_name = ""
+
+
 upload_page()
