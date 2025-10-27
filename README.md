@@ -1,7 +1,7 @@
 <!-- omit from toc -->
 # Centralize company knowledge with an Enterprise RAG Chatbot
 
-Empower employees with fast, accurate HR, procurement, sales, and IT answers through a secure, centralized Retrieval Augmented Generation chatbot.
+Use retrieval-augmented generation (RAG) to enhance large language models with specialized data sources for more accurate and context-aware responses.
 
 <!-- omit from toc -->
 ## Table of Contents
@@ -53,10 +53,18 @@ This QuickStart allows users to explore the capabilities of RAG by:
 ## Requirements 
 
 ### Minimum hardware requirements 
+- 1 GPU/HPU with 24GB of VRAM for the LLM, refer to the [chart below](#supported-models)
+- 1 GPU/HPU with 24GB of VRAM for the safety/shield model (optional)
 
 ### Minimum software requirements 
+- OpenShift Client CLI - [oc](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/cli_tools/openshift-cli-oc#installing-openshift-cli)
+- OpenShift Cluster 4.16+ 
+- OpenShift AI 
+- Helm CLI - helm
 
 ### Required user permissions 
+- Regular user permission for default deployment
+- Cluster admin required for *advanced* configurations
 
 
 ## Deploy
@@ -66,13 +74,7 @@ This QuickStart allows users to explore the capabilities of RAG by:
 *Please see the [local deployments](#local-deployment) section for additional deployment options.* 
 
 ### Prerequisites
-
-- OpenShift Cluster 4.16+ with OpenShift AI
-- OpenShift Client CLI - [oc](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/cli_tools/openshift-cli-oc#installing-openshift-cli)
-- Helm CLI - helm
 - [huggingface-cli](https://huggingface.co/docs/huggingface_hub/guides/cli) (optional)
-- 1 GPU/HPU with 24GB of VRAM for the LLM, refer to the chart below
-- 1 GPU/HPU with 24GB of VRAM for the safety/shield model (optional)
 - [Hugging Face Token](https://huggingface.co/settings/tokens)
 - Access to [Meta Llama](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct/) model
 - Access to [Meta Llama Guard](https://huggingface.co/meta-llama/Llama-Guard-3-8B/) model
