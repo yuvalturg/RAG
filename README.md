@@ -63,7 +63,8 @@ This QuickStart allows users to explore the capabilities of RAG by:
 - Helm CLI - helm
 
 ### Required user permissions 
-- Cluster admin permissions are required
+- Regular user permission for default deployment
+- Cluster admin required for *advanced* configurations
 
 
 ## Deploy
