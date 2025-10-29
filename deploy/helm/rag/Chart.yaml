@@ -2,21 +2,18 @@ apiVersion: v2
 name: rag
 description: A Helm chart for Kubernetes
 type: application
-version: 0.2.22
+version: 0.2.23
 appVersion: "0.2.22"
 
 dependencies:
   - name: pgvector
     version: 0.1.0
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-  - name: minio
-    version: 0.1.0
-    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
   - name: llm-service
     version: 0.1.0
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
   - name: configure-pipeline
-    version: 0.1.0
+    version: 0.5.1
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
   - name: ingestion-pipeline
     version: 0.5.1
