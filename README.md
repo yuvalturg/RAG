@@ -27,7 +27,6 @@ This QuickStart allows users to explore the capabilities of RAG by:
 - Tweaking sampling parameters to influence LLM responses
 - Using custom system prompts
 - Switching between simple and agent based RAG
-- Switching between standard agents and ReAct agents
 
 
 ### Architecture diagrams
@@ -258,6 +257,6 @@ For local development and testing, see the [Local Setup Guide](docs/local_setup_
 
 ## Tags 
 
-* **Industry:** Cross-industry
 * **Product:** OpenShift AI 
 * **Use case:** RAG
+* **Business challenge:** Adopt and scale AI 
