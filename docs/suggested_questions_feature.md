@@ -16,12 +16,13 @@ The RAG chat UI now includes a **Suggested Questions** feature that displays rel
 
 ### Helm Deployment (OpenShift/Kubernetes)
 
-Questions are configured at the root level in the `rag-values.yaml` file in a dedicated `suggestedQuestions` section:
+Questions are configured at the root level in the `rag-values.yaml` file in a dedicated `suggestedQuestions` section. The Helm chart automatically creates a ConfigMap from this configuration and injects it into the UI pod as an environment variable:
 
 ```yaml
 # Suggested Questions Configuration
 # These questions appear in the chat UI when users select a database
 # The key should match the vector_store_name (identifier) of the database
+# This configuration will be stored in a ConfigMap and injected as an environment variable
 suggestedQuestions:
   hr-vector-db-v1-0:
     - "What are the health insurance benefits offered?"
@@ -37,26 +38,7 @@ suggestedQuestions:
     # ... more questions
 ```
 
-This root-level configuration keeps the questions separate from the ingestion pipeline configuration, making it easier to manage and modify.
-
-The questions are passed to the UI via environment variables:
-
-```yaml
-env:
-  - name: "RAG_QUESTION_SUGGESTIONS"
-    value: |
-      {
-        "hr-vector-db-v1-0": [
-          "What are the health insurance benefits offered?",
-          "How many vacation days do employees get?",
-          ...
-        ],
-        "legal-vector-db-v1-0": [
-          "What are the key contract terms?",
-          ...
-        ]
-      }
-```
+The Helm chart creates a ConfigMap named `<release-name>-rag-suggested-questions` that contains the JSON-formatted questions, which is then mounted as the `RAG_QUESTION_SUGGESTIONS` environment variable in the deployment.
 
 ### Local Deployment (Podman/Docker)
 
@@ -132,9 +114,12 @@ To add or modify questions for a database:
 
 1. **For Helm deployments**: 
    - Edit the root-level `suggestedQuestions` section in `rag-values.yaml`
-   - Also update the `RAG_QUESTION_SUGGESTIONS` environment variable in the UI `env` section to match
+   - Run `helm upgrade` to update the ConfigMap
+   - The changes will be automatically applied to the UI pods
+   
 2. **For local deployments**: 
    - Update the `RAG_QUESTION_SUGGESTIONS` JSON in `podman-compose.yml`
+   - Restart the `rag-ui` container
 
 ### JSON Format
 
@@ -149,29 +134,3 @@ The question suggestions use this structure:
   ]
 }
 ```
-
-**Important**: The key must match the `identifier` of the vector database (typically `{name}-v{version}`), not just the `vector_db_name`.
-
-## Technical Implementation
-
-### Files Modified
-
-1. **`deploy/helm/rag-values.yaml`**: Added question mappings to pipeline configs and environment variables
-2. **`deploy/local/podman-compose.yml`**: Added question mappings to UI service
-3. **`frontend/llama_stack_ui/distribution/ui/modules/utils.py`**: Added helper functions to load and filter questions
-4. **`frontend/llama_stack_ui/distribution/ui/page/playground/chat.py`**: Added UI components and click handlers
-
-### Key Functions
-
-- `get_question_suggestions()`: Loads questions from environment variable
-- `get_suggestions_for_databases()`: Filters questions based on selected databases
-- `display_suggested_questions()`: Renders the UI with buttons and expand/collapse functionality
-- Question click handler: Automatically sends selected question to chat
-
-## Benefits
-
-1. **Improved Discoverability**: Users can quickly understand what each database contains
-2. **Faster Onboarding**: New users can start exploring immediately with relevant examples
-3. **Better UX**: Reduces the cognitive load of formulating questions
-4. **Contextual Help**: Questions are tailored to each specific database's content
-5. **Clean Configuration**: Root-level `suggestedQuestions` section separates UI concerns from pipeline configuration
