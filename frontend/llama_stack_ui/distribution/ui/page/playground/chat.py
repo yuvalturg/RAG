@@ -15,6 +15,7 @@ from llama_stack_client.lib.agents.react.agent import ReActAgent
 from llama_stack_client.lib.agents.react.tool_parser import ReActOutput
 from llama_stack.apis.common.content_types import ToolCallDelta
 from llama_stack_ui.distribution.ui.modules.api import llama_stack_api
+from llama_stack_ui.distribution.ui.modules.utils import get_suggestions_for_databases, get_vector_db_name
 from llama_stack_client.types import UserMessage
 from llama_stack_client.types.shared_params import SamplingParams
 from llama_stack_client.types.shared_params.response_format import JsonSchemaResponseFormat
@@ -113,7 +114,7 @@ def tool_chat_page():
             index=0, # Default to Direct
             captions=[
                 "Directly calls the model with optional RAG.",
-                "Uses an Agent (Regular or ReAct) with tools.",
+                "Uses an Agent with tools.",
             ],
             on_change=reset_agent,
             help="Choose how requests are processed. 'Direct' bypasses agents, 'Agent-based' uses them.",
@@ -125,7 +126,7 @@ def tool_chat_page():
             vector_dbs = llama_stack_api.client.vector_dbs.list() or []
             if not vector_dbs:
                 st.info("No vector databases available for selection.")
-            vector_db_names = [vector_db.vector_db_name for vector_db in vector_dbs]
+            vector_db_names = [get_vector_db_name(vector_db) for vector_db in vector_dbs]
             selected_vector_dbs = st.multiselect(
                 label="Select Document Collections to use in RAG queries",
                 options=vector_db_names,
@@ -147,7 +148,7 @@ def tool_chat_page():
                 vector_dbs = llama_stack_api.client.vector_dbs.list() or []
                 if not vector_dbs:
                     st.info("No vector databases available for selection.")
-                vector_db_names = [vector_db.vector_db_name for vector_db in vector_dbs]
+                vector_db_names = [get_vector_db_name(vector_db) for vector_db in vector_dbs]
                 selected_vector_dbs = st.multiselect(
                     label="Select Document Collections to use in RAG queries",
                     options=vector_db_names,
@@ -235,11 +236,16 @@ def tool_chat_page():
             if tool_name == "builtin::rag":
                 if len(selected_vector_dbs) > 0:
                     vector_dbs = llama_stack_api.client.vector_dbs.list() or []
-                    vector_db_ids = [vector_db.identifier for vector_db in vector_dbs if vector_db.vector_db_name in selected_vector_dbs]
+                    vector_db_ids = [vector_db.identifier for vector_db in vector_dbs if get_vector_db_name(vector_db) in selected_vector_dbs]
                     tool_dict = dict(
-                        name="builtin::rag",
+                        name="builtin::rag/knowledge_search",
                         args={
                             "vector_db_ids": list(vector_db_ids),
+                            # Defaults
+                            "query_config": {
+                                "chunk_size_in_tokens": 512,
+                                "chunk_overlap_in_tokens": 50,
+                            },
                         },
                     )
                     updated_toolgroup_selection.append(tool_dict)
@@ -296,8 +302,68 @@ def tool_chat_page():
     
     if "debug_events" not in st.session_state: # Per-turn debug logs
         st.session_state["debug_events"] = []
+    
+    if "show_more_questions" not in st.session_state:
+        st.session_state["show_more_questions"] = False
+    
+    if "selected_question" not in st.session_state:
+        st.session_state["selected_question"] = None
 
     render_history(tool_debug) # Display the current chat history and any past debug events
+
+    # Display suggested questions if databases are selected
+    def display_suggested_questions():
+        """Display suggested questions based on selected databases."""
+        if not selected_vector_dbs:
+            return
+        
+        vector_dbs = llama_stack_api.client.vector_dbs.list() or []
+        suggestions = get_suggestions_for_databases(selected_vector_dbs, vector_dbs)
+        
+        if not suggestions:
+            return
+        
+        st.markdown("### 💡 Suggested Questions")
+        
+        # Determine how many questions to show
+        num_to_show = len(suggestions) if st.session_state.show_more_questions else min(4, len(suggestions))
+        
+        # Display questions in a grid-like format using columns
+        cols_per_row = 2
+        for i in range(0, num_to_show, cols_per_row):
+            cols = st.columns(cols_per_row)
+            for j in range(cols_per_row):
+                idx = i + j
+                if idx < num_to_show:
+                    question, db_name = suggestions[idx]
+                    with cols[j]:
+                        # Create a button for each question
+                        button_key = f"question_btn_{idx}_{hash(question)}"
+                        if st.button(
+                            question,
+                            key=button_key,
+                            use_container_width=True,
+                            help=f"From: {db_name}"
+                        ):
+                            st.session_state.selected_question = question
+                            st.rerun()
+        
+        # Show "Show More" or "Show Less" button if there are more than 4 questions
+        if len(suggestions) > 4:
+            col1, col2, col3 = st.columns([1, 1, 1])
+            with col2:
+                if st.session_state.show_more_questions:
+                    if st.button("Show Less", use_container_width=True):
+                        st.session_state.show_more_questions = False
+                        st.rerun()
+                else:
+                    if st.button(f"Show More ({len(suggestions) - 4} more)", use_container_width=True):
+                        st.session_state.show_more_questions = True
+                        st.rerun()
+        
+        st.markdown("---")
+    
+    display_suggested_questions()
 
     def response_generator(turn_response, debug_events_list):
         if st.session_state.get("agent_type") == AgentType.REACT:
@@ -485,13 +551,16 @@ def tool_chat_page():
             # Add other log types as needed for debugging
 
     def agent_process_prompt(prompt, debug_events_list):
+        print(f"In agent_process_prompt: {prompt}")
         # Send the prompt to the agent
         turn_response = agent.create_turn(
             session_id=session_id,
             messages=[UserMessage(role="user", content=prompt)],
             stream=True,
         )
+        print(f"In agent_process_prompt: {turn_response}")
         response_content = st.write_stream(response_generator(turn_response, debug_events_list))
+        print(f"In agent_process_prompt: {response_content}")
         st.session_state.messages.append({"role": "assistant", "content": response_content})
 
 
@@ -499,7 +568,7 @@ def tool_chat_page():
         # Query the vector DB
         if selected_vector_dbs:
             vector_dbs = llama_stack_api.client.vector_dbs.list() or []
-            vector_db_ids = [vector_db.identifier for vector_db in vector_dbs if vector_db.vector_db_name in selected_vector_dbs]
+            vector_db_ids = [vector_db.identifier for vector_db in vector_dbs if get_vector_db_name(vector_db) in selected_vector_dbs]
             with st.spinner("Retrieving context (RAG)..."):
                 try:
                     rag_response = llama_stack_api.client.tool_runtime.rag_tool.query(
@@ -563,22 +632,43 @@ def tool_chat_page():
         st.session_state.messages.append(response_dict)
         #st.session_state.displayed_messages.append(response_dict)
 
-    if prompt := st.chat_input(placeholder="Ask a question..."):
-        # Append the user message to history and display it
+    def process_prompt(prompt):
+        print(f"In process_prompt: {prompt}")
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
+        
         # Prepare for assistant's response
         # Each assistant turn gets its own list for debug events
         st.session_state.debug_events.append([])
         current_turn_debug_events_list = st.session_state.debug_events[-1] # Get the list for this turn
 
         st.session_state.prompt = prompt
+
+        print(f"In process_prompt: {st.session_state.prompt}")
+        print(f"In processing mode: {processing_mode}")
         if processing_mode == "Agent-based":
             agent_process_prompt(st.session_state.prompt, current_turn_debug_events_list)
         else:  # rag_mode == "Direct"
             direct_process_prompt(st.session_state.prompt, current_turn_debug_events_list)
         #st.session_state.prompt = None
         st.rerun()
+
+    # Handle selected question from suggestions
+    if st.session_state.selected_question:
+        prompt = st.session_state.selected_question
+        st.session_state.selected_question = None  # Clear the selected question
+
+        process_prompt(prompt)
+        
+    
+    # Handle manual chat input
+    if prompt := st.chat_input(placeholder="Ask a question..."):
+        # Append the user message to history and display it
+        process_prompt(prompt)
+       
+
+    
+
 
 tool_chat_page()

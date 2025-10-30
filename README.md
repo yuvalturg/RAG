@@ -8,11 +8,15 @@ Use retrieval-augmented generation (RAG) to enhance large language models with s
 - [Detailed description](#detailed-description)
   - [Architecture diagrams](#architecture-diagrams)
 - [Requirements](#requirements)
+  - [Minimum hardware requirements](#minimum-hardware-requirements)
+  - [Minimum software requirements](#minimum-software-requirements)
+  - [Required user permissions](#required-user-permissions)
 - [Deploy](#deploy)
   - [Prerequisites](#prerequisites)
   - [Supported Models](#supported-models)
   - [Installation Steps](#installation-steps)
   - [Local Deployment](#local-deployment)
+- [Tags](#tags)
 
 
 ## Detailed description
@@ -22,7 +26,8 @@ See how FantaCo, a fictional large enterprise, launched a secure RAG chatbot tha
 Retrieval-Augmented Generation (RAG) enhances Large Language Models (LLMs) by retrieving relevant external knowledge to improve accuracy, reduce hallucinations, and support domain-specific conversations.
 
 This QuickStart allows users to explore the capabilities of RAG by:
-- exploring FantaCo's solution
+
+- Exploring FantaCo's solution
 - Uploading new documents to be embedded
 - Tweaking sampling parameters to influence LLM responses
 - Using custom system prompts
@@ -57,8 +62,8 @@ This QuickStart allows users to explore the capabilities of RAG by:
 
 ### Minimum software requirements 
 - OpenShift Client CLI - [oc](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/cli_tools/openshift-cli-oc#installing-openshift-cli)
-- OpenShift Cluster 4.16+ 
-- OpenShift AI 
+- OpenShift Cluster 4.18+
+- OpenShift AI
 - Helm CLI - helm
 
 ### Required user permissions 
@@ -255,8 +260,8 @@ For detailed post-installation verification, configuration options, and usage in
 
 For local development and testing, see the [Local Setup Guide](docs/local_setup_guide.md).
 
-## Tags 
+## Tags
 
-* **Product:** OpenShift AI 
+* **Product:** OpenShift AI
 * **Use case:** RAG
-* **Business challenge:** Adopt and scale AI 
+* **Business challenge:** Adopt and scale AI

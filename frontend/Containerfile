@@ -7,6 +7,7 @@ ARG IMAGE_TAG
 WORKDIR /app
 COPY . /app/
 
+
 # Make sure IMAGE_TAG is set
 RUN if [ -z "$IMAGE_TAG" ]; then echo "IMAGE_TAG is not set"; exit 1; fi
 

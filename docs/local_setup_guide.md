@@ -11,6 +11,16 @@ This guide walks you through running a Llama Stack server locally using **Ollama
   - [2. Start Ollama Server](#2-start-ollama-server)
   - [3. Configure Environment Variables](#3-configure-environment-variables)
   - [4. Run Llama Stack with Podman](#4-run-llama-stack-with-podman)
+- [Quick Start with Podman Compose](#quick-start-with-podman-compose)
+  - [Setup](#setup)
+  - [Useful Commands](#useful-commands)
+- [Automatic Document Ingestion](#automatic-document-ingestion)
+  - [Configuration](#configuration)
+  - [Source Types](#source-types)
+    - [GitHub Repository](#github-repository)
+    - [S3/MinIO Bucket](#s3minio-bucket)
+    - [Direct URLs](#direct-urls)
+  - [Managing Ingestion](#managing-ingestion)
 - [Using the RAG UI](#using-the-rag-ui)
 - [Environment Variables](#environment-variables)
 - [Redeploying Changes](#redeploying-changes)
@@ -123,6 +133,153 @@ oc port-forward svc/llamastack 8321:8321
 ```
 
 This makes the remote Service available at localhost:8321
+
+## Quick Start with Podman Compose
+
+For a simpler deployment experience, use `podman-compose` which automatically sets up all services including Ollama, Llama Stack, PGVector database, and the RAG UI.
+
+### Setup
+
+1. Navigate to the local deployment directory:
+
+```bash
+cd deploy/local
+```
+
+2. Start all services:
+
+```bash
+make start
+```
+
+This will:
+- Start Ollama with the `llama3.2:1b-instruct-fp16` model
+- Start Llama Stack server
+- Start PGVector database
+- Run the ingestion service to populate vector databases
+- Start the RAG UI
+
+3. Access the services:
+- **RAG UI**: http://localhost:8501
+- **Llama Stack API**: http://localhost:8321
+- **Ollama API**: http://localhost:11434
+- **PGVector**: localhost:5432
+
+### Useful Commands
+
+```bash
+# View all services status
+make status
+
+# View logs
+make logs
+
+# View logs for specific service
+make logs-ui
+make logs-llamastack
+make logs-ingestion
+make logs-pgvector
+
+# Re-run ingestion
+make ingest
+
+# List vector databases
+make list-vector-dbs
+
+# Stop all services
+make stop
+
+# Clean up everything (including data)
+make cleanup
+```
+
+## Automatic Document Ingestion
+
+The local deployment includes an automatic ingestion service that creates and populates vector databases from various sources.
+
+### Configuration
+
+Edit `deploy/local/ingestion-config.yaml` to configure your document sources:
+
+```yaml
+pipelines:
+  my-docs-pipeline:
+    enabled: true
+    name: "my-docs-db"
+    version: "1.0"
+    vector_store_name: "my-docs-db-v1-0"
+    source: GITHUB  # or S3, URL
+    config:
+      url: "https://github.com/yourorg/your-repo.git"
+      path: "docs"
+      branch: "main"
+```
+
+### Source Types
+
+#### GitHub Repository
+
+```yaml
+source: GITHUB
+config:
+  url: "https://github.com/rh-ai-quickstart/RAG.git"
+  path: "notebooks/hr"
+  branch: "main"
+  # token: "ghp_xxx"  # Optional for private repos
+```
+
+#### S3/MinIO Bucket
+
+```yaml
+source: S3
+config:
+  endpoint: "http://minio:9000"
+  bucket: "documents"
+  access_key: "minio_user"
+  secret_key: "minio_password"
+  # prefix: "folder/"  # Optional
+```
+
+#### Direct URLs
+
+```yaml
+source: URL
+config:
+  urls:
+    - "https://example.com/document1.pdf"
+    - "https://example.com/document2.pdf"
+```
+
+### Managing Ingestion
+
+**View ingestion progress:**
+```bash
+make logs-ingestion
+```
+
+**Re-run ingestion:**
+```bash
+make ingest
+```
+
+**Edit configuration:**
+```bash
+make ingest-config
+```
+
+**Check created databases:**
+```bash
+make list-vector-dbs
+```
+
+The ingestion service will:
+1. Wait for Llama Stack to be ready
+2. Fetch documents from configured sources
+3. Process PDFs with Docling (advanced chunking)
+4. Create vector databases with embeddings
+5. Insert all chunks into PGVector
+
+For more details, see the [Ingestion Service README](../ingestion-service/README.md).
 
 ## Using the RAG UI
 
