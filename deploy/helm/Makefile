@@ -39,35 +39,40 @@ define check_values_file
 		if [ -f "$(VALUES_EXAMPLE)" ]; then \
 			echo -e "$(YELLOW)[INFO]$(NC) Values file not found. Creating from example..."; \
 			cp "$(VALUES_EXAMPLE)" "$(VALUES_FILE)"; \
-			echo -e ""; \
-			echo -e "$(GREEN)╔══════════════════════════════════════════════════════════════════════════╗$(NC)"; \
-			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
-			echo -e "$(GREEN)║  $(YELLOW)⚠️  IMPORTANT: Configuration Required$(GREEN)      	                           ║$(NC)"; \
-			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
-			echo -e "$(GREEN)║  $(NC)Configuration file has been initialized: $(BLUE)rag-values.yaml$(GREEN)     	   ║$(NC)"; \
-			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
-			echo -e "$(GREEN)║  $(YELLOW)Before continuing, you MUST configure at least:$(GREEN)                         ║$(NC)"; \
-			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
-			echo -e "$(GREEN)║  $(RED)1. Enable at least ONE model$(GREEN) in the global.models section               ║$(NC)"; \
-			echo -e "$(GREEN)║     $(NC)Set $(BLUE)enabled: true$(NC) for your chosen model$(GREEN)                              ║$(NC)"; \
-			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
-			echo -e "$(GREEN)║  $(YELLOW)2. Add your Hugging Face token$(GREEN) (required for model downloads)           ║$(NC)"; \
-			echo -e "$(GREEN)║     $(NC)Get token from: $(BLUE)https://huggingface.co/settings/tokens$(GREEN)               ║$(NC)"; \
-			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
-			echo -e "$(GREEN)║  $(YELLOW)3. (Optional)$(NC) Add TAVILY API key for web search functionality$(GREEN)           ║$(NC)"; \
-			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
-			echo -e "$(GREEN)║  $(BLUE)📝 ACTION REQUIRED:$(GREEN)                                                     ║$(NC)"; \
-			echo -e "$(GREEN)║     $(NC)Open a new terminal window and edit the configuration file:$(GREEN)          ║$(NC)"; \
-			echo -e "$(GREEN)║     $(BLUE)nano rag-values.yaml$(GREEN)  or  $(BLUE)vim rag-values.yaml$(GREEN)                        ║$(NC)"; \
-			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
-			echo -e "$(GREEN)║     $(NC)After editing, save the file and return here to continue.$(GREEN)            ║$(NC)"; \
-			echo -e "$(GREEN)║                                                                          ║$(NC)"; \
-			echo -e "$(GREEN)╚══════════════════════════════════════════════════════════════════════════╝$(NC)"; \
-			echo -e ""; \
-			echo -e "$(YELLOW)[WAITING]$(NC) Configure rag-values.yaml in another terminal, then press Enter..."; \
-			read -p "" continue; \
-			echo -e "$(BLUE)[INFO]$(NC) Continuing with installation..."; \
-			echo -e ""; \
+			if [ -z "$(LLM)" ]; then \
+				echo -e ""; \
+				echo -e "$(GREEN)╔══════════════════════════════════════════════════════════════════════════╗$(NC)"; \
+				echo -e "$(GREEN)║                                                                          ║$(NC)"; \
+				echo -e "$(GREEN)║  $(YELLOW)⚠️  IMPORTANT: Configuration Required$(GREEN)      	                           ║$(NC)"; \
+				echo -e "$(GREEN)║                                                                          ║$(NC)"; \
+				echo -e "$(GREEN)║  $(NC)Configuration file has been initialized: $(BLUE)rag-values.yaml$(GREEN)     	   ║$(NC)"; \
+				echo -e "$(GREEN)║                                                                          ║$(NC)"; \
+				echo -e "$(GREEN)║  $(YELLOW)Before continuing, you MUST configure at least:$(GREEN)                         ║$(NC)"; \
+				echo -e "$(GREEN)║                                                                          ║$(NC)"; \
+				echo -e "$(GREEN)║  $(RED)1. Enable at least ONE model$(GREEN) in the global.models section               ║$(NC)"; \
+				echo -e "$(GREEN)║     $(NC)Set $(BLUE)enabled: true$(NC) for your chosen model$(GREEN)                              ║$(NC)"; \
+				echo -e "$(GREEN)║                                                                          ║$(NC)"; \
+				echo -e "$(GREEN)║  $(YELLOW)2. Add your Hugging Face token$(GREEN) (required for model downloads)           ║$(NC)"; \
+				echo -e "$(GREEN)║     $(NC)Get token from: $(BLUE)https://huggingface.co/settings/tokens$(GREEN)               ║$(NC)"; \
+				echo -e "$(GREEN)║                                                                          ║$(NC)"; \
+				echo -e "$(GREEN)║  $(YELLOW)3. (Optional)$(NC) Add TAVILY API key for web search functionality$(GREEN)           ║$(NC)"; \
+				echo -e "$(GREEN)║                                                                          ║$(NC)"; \
+				echo -e "$(GREEN)║  $(BLUE)📝 ACTION REQUIRED:$(GREEN)                                                     ║$(NC)"; \
+				echo -e "$(GREEN)║     $(NC)Open a new terminal window and edit the configuration file:$(GREEN)          ║$(NC)"; \
+				echo -e "$(GREEN)║     $(BLUE)nano rag-values.yaml$(GREEN)  or  $(BLUE)vim rag-values.yaml$(GREEN)                        ║$(NC)"; \
+				echo -e "$(GREEN)║                                                                          ║$(NC)"; \
+				echo -e "$(GREEN)║     $(NC)After editing, save the file and return here to continue.$(GREEN)            ║$(NC)"; \
+				echo -e "$(GREEN)║                                                                          ║$(NC)"; \
+				echo -e "$(GREEN)╚══════════════════════════════════════════════════════════════════════════╝$(NC)"; \
+				echo -e ""; \
+				echo -e "$(YELLOW)[WAITING]$(NC) Configure rag-values.yaml in another terminal, then press Enter..."; \
+				read -p "" continue; \
+				echo -e "$(BLUE)[INFO]$(NC) Continuing with installation..."; \
+				echo -e ""; \
+			else \
+				echo -e "$(GREEN)[SUCCESS]$(NC) Using LLM model from command line: $(LLM)"; \
+				echo -e ""; \
+			fi; \
 		else \
 			echo -e "$(RED)[ERROR]$(NC) Neither $(VALUES_FILE) nor $(VALUES_EXAMPLE) found."; \
 			echo -e "$(BLUE)[INFO]$(NC) Please create $(VALUES_FILE) with your configuration."; \
