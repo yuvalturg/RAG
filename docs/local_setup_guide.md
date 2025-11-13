@@ -2,6 +2,8 @@
 # Local Deployment
 This guide walks you through running a Llama Stack server locally using **Ollama** and **Podman**.
 
+> **⚡ Performance Update**: Ollama now runs directly on your host machine (not in a container) for significantly better performance. The quickstart uses `make setup-ollama` to automate the installation and configuration.
+
 <!-- omit from toc -->
 ## Table of Contents
 - [Prerequisites](#prerequisites)
@@ -31,18 +33,27 @@ This guide walks you through running a Llama Stack server locally using **Ollama
 - [Podman](https://podman.io/docs/installation) or Docker
 - Python 3.10 or newer
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python package manager)
-- [Ollama](https://ollama.com/download)
+- [Ollama](https://ollama.com/download) - **runs on host machine for better performance**
 
-Verify installation:
+You can install Ollama manually or use the automated setup:
 
 ```bash
+# Automated setup (recommended - from deploy/local directory)
+cd deploy/local
+make setup-ollama
+
+# Or verify manual installation
 podman --version
 python3 --version
 uv --version
 ollama --version
 ```
 
-Note: `uv` is used for fast Python package management and virtual environment handling. Also, `docker` works as well as podman.
+**Note**: 
+- `uv` is used for fast Python package management and virtual environment handling
+- `docker` works as well as podman
+- **Ollama now runs on your host** instead of in a container for ~3x better inference performance
+- See [OLLAMA_SETUP.md](OLLAMA_SETUP.md) for detailed Ollama configuration and troubleshooting
 
 ## Supported Models
 
@@ -65,13 +76,33 @@ git clone https://github.com/rh-ai-quickstart/RAG
 
 ### 2. Start Ollama Server
 
-Use the following command to launch the Ollama model:
+**Option A: Quick Setup (Recommended)**
+
+Use the automated setup (requires navigating to `deploy/local` first):
 
 ```bash
+cd deploy/local
+make setup-ollama
+```
+
+This will install Ollama, start the service, and pull the required model.
+
+**Option B: Manual Setup**
+
+Start the Ollama service and load the model:
+
+```bash
+# Start Ollama service (if not already running)
+ollama serve  # On macOS, this usually starts automatically
+
+# In another terminal, pull the model
+ollama pull llama3.2:3b-instruct-fp16
+
+# Optional: Pre-load the model with keepalive
 ollama run llama3.2:3b-instruct-fp16 --keepalive 60m
 ```
 
-Note: This will keep the model in memory for 60 minutes.
+Note: The `--keepalive 60m` option keeps the model in memory for 60 minutes for faster inference.
 
 ### 3. Configure Environment Variables
 
@@ -136,7 +167,7 @@ This makes the remote Service available at localhost:8321
 
 ## Quick Start with Podman Compose
 
-For a simpler deployment experience, use `podman-compose` which automatically sets up all services including Ollama, Llama Stack, PGVector database, and the RAG UI.
+For a simpler deployment experience, use `podman-compose` which automatically sets up Llama Stack and the RAG UI. **Ollama runs directly on your host machine** for better performance instead of in a container.
 
 ### Setup
 
@@ -146,28 +177,42 @@ For a simpler deployment experience, use `podman-compose` which automatically se
 cd deploy/local
 ```
 
-2. Start all services:
+2. Install and configure Ollama on your host machine (first time only):
+
+```bash
+make setup-ollama
+```
+
+This will:
+- Install Ollama on your host machine (if not already installed)
+- Start the Ollama service
+- Pull the `llama3.2:3b-instruct-fp16` model
+
+3. Start all services:
 
 ```bash
 make start
 ```
 
 This will:
-- Start Ollama with the `llama3.2:1b-instruct-fp16` model
-- Start Llama Stack server
-- Start PGVector database
+- Verify Ollama is running on the host
+- Start Llama Stack server (connects to host Ollama)
 - Run the ingestion service to populate vector databases
 - Start the RAG UI
 
-3. Access the services:
+4. Access the services:
 - **RAG UI**: http://localhost:8501
 - **Llama Stack API**: http://localhost:8321
-- **Ollama API**: http://localhost:11434
-- **PGVector**: localhost:5432
+- **Ollama API (host)**: http://localhost:11434
+
+**Note**: For detailed information about running Ollama on the host, see [OLLAMA_SETUP.md](OLLAMA_SETUP.md).
 
 ### Useful Commands
 
 ```bash
+# Check if Ollama is running on host
+make check-ollama
+
 # View all services status
 make status
 
@@ -178,7 +223,9 @@ make logs
 make logs-ui
 make logs-llamastack
 make logs-ingestion
-make logs-pgvector
+
+# Test all service endpoints
+make test-services
 
 # Re-run ingestion
 make ingest
@@ -186,12 +233,23 @@ make ingest
 # List vector databases
 make list-vector-dbs
 
-# Stop all services
+# Stop all services (Note: This does NOT stop Ollama on host)
 make stop
 
 # Clean up everything (including data)
 make cleanup
+
+# View current configuration
+make config
 ```
+
+**Development Mode**: Start backend services in containers and run UI locally for faster development:
+
+```bash
+make dev
+```
+
+This starts Llama Stack in a container (using host Ollama) and runs the UI locally with hot-reload enabled.
 
 ## Automatic Document Ingestion
 
@@ -371,10 +429,69 @@ To redeploy to the cluster run the same `make` command as you did before.
 
 ## Troubleshooting
 
-**Check if Podman is running:**
+**Check if Ollama is running on host:**
+
+```bash
+make check-ollama
+# Or manually:
+curl http://localhost:11434/api/version
+ollama list  # List available models
+```
+
+**If Ollama is not running:**
+
+```bash
+# On macOS/Linux:
+ollama serve
+
+# Or run setup again:
+make setup-ollama
+```
+
+**Check if Podman containers are running:**
 
 ```bash
 podman ps
+# Or:
+make status
+```
+
+**Test all services:**
+
+```bash
+make test-services
+```
+
+**View service logs:**
+
+```bash
+make logs              # All services
+make logs-llamastack   # Llama Stack only
+make logs-ui           # UI only
+make logs-ingestion    # Ingestion service
+```
+
+**Ollama can't be reached from containers:**
+
+If Llama Stack can't connect to Ollama on the host:
+
+```bash
+# Verify Ollama is listening on all interfaces
+export OLLAMA_HOST=0.0.0.0
+ollama serve
+
+# Test from container
+podman exec -it rag-llamastack curl http://host.containers.internal:11434/api/version
+```
+
+**Model not found:**
+
+```bash
+# Pull the required model
+ollama pull llama3.2:3b-instruct-fp16
+
+# List available models
+ollama list
 ```
 
 **Reinstall dependencies if needed:**
@@ -407,4 +524,14 @@ uv run <command>
 rm -rf .venv
 uv sync
 ```
+
+**Complete reset of local deployment:**
+
+```bash
+make cleanup  # Remove all containers and volumes
+make setup-ollama  # Reinstall Ollama and models
+make start    # Start services fresh
+```
+
+For more detailed troubleshooting related to Ollama running on the host, see [OLLAMA_SETUP.md](OLLAMA_SETUP.md).
 
