@@ -93,8 +93,8 @@ This QuickStart allows users to explore the capabilities of RAG by:
 | Generation  | `meta-llama/Llama-3.1-8B-Instruct`     | L4/HPU      | g6.2xlarge
 | Generation  | `meta-llama/Meta-Llama-3-70B-Instruct` | A100 x2/HPU | p4d.24xlarge
 | Safety      | `meta-llama/Llama-Guard-3-8B`          | L4/HPU      | g6.2xlarge
-- There is also an option for devlopment to use a remote llm by editing the `rag_values.yml`. 
-  Fill in the remote LLM configuration with Red Hats Hosted LLM and API Key
+
+- Note: Developers can also configure a remote LLM by modifying the `rag_values.yml` file, which gives you complete control over all parameter settings.
 
 ```yaml
   remote-llm:
@@ -177,8 +177,7 @@ The "guard" models can be used to test shields for profanity, hate speech, viole
 
 Use the taint key from above as the `LLM_TOLERATION` and `SAFETY_TOLERATION`. The namespace will be auto-created.
 
-> **Note Running just `make install` from the deploy/helm directory will create a rag_values.yml file which can be edited to use in deployment and you can ignore setting params manually.**
-> - The output of `make install` is the `rag_values.yml
+> **Note Running just `make install` from the deploy/helm directory will create a rag_values.yml file which can be edited to use in deployments.**
 
 **GPU Deployment Examples (Default):**
 
