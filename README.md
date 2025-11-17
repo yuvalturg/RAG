@@ -1,6 +1,8 @@
 <!-- omit from toc -->
 # Centralize company knowledge with an Enterprise RAG Chatbot
 
+[![GitHub Release](https://img.shields.io/github/v/release/rh-ai-quickstart/RAG)](https://github.com/rh-ai-quickstart/RAG/releases)
+
 Use retrieval-augmented generation (RAG) to enhance large language models with specialized data sources for more accurate and context-aware responses.
 
 <!-- omit from toc -->
