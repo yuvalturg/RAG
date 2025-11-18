@@ -94,6 +94,16 @@ This QuickStart allows users to explore the capabilities of RAG by:
 | Generation  | `meta-llama/Meta-Llama-3-70B-Instruct` | A100 x2/HPU | p4d.24xlarge
 | Safety      | `meta-llama/Llama-Guard-3-8B`          | L4/HPU      | g6.2xlarge
 
+- Note: Developers can also configure a remote LLM by modifying the `rag_values.yml` file, which gives you complete control over all parameter settings.
+
+```yaml
+  remote-llm:
+    id: llama-3-3-70b-instruct-w8a8
+    url: https://somedomain.com/v1
+    apiToken: fake-token
+    enabled: true
+```
+
 Note: the 70B model is NOT required for initial testing of this example. The safety/shield model `Llama-Guard-3-8B` is also optional.
 
 ### Installation Steps
@@ -166,6 +176,8 @@ The "guard" models can be used to test shields for profanity, hate speech, viole
 6. **Deploy with Helm**
 
 Use the taint key from above as the `LLM_TOLERATION` and `SAFETY_TOLERATION`. The namespace will be auto-created.
+
+> **Note Running just `make install` from the deploy/helm directory will create a rag_values.yml file which can be edited to use in deployments.**
 
 **GPU Deployment Examples (Default):**
 
