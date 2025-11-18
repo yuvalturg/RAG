@@ -10,10 +10,11 @@ jobs:
     name: Ansible Lint on PR
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
+        # Note: For pull requests, actions/checkout@v4 automatically checks out
+        # the PR head branch. For workflow_dispatch, it checks out the default branch.
+        # Explicitly setting ref can cause issues with PR merge commits.
 
       - name: Set up Python
         uses: actions/setup-python@v5
