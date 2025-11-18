@@ -75,28 +75,6 @@ pgvector:
       memory: "1Gi"
       cpu: "1"
 
-# MinIO configuration
-minio:
-  enabled: true
-  secret:
-    user: minio_test_user
-    password: minio_test_password
-    host: minio
-    port: "9000"
-  resources:
-    requests:
-      memory: "256Mi"
-      cpu: "250m"
-    limits:
-      memory: "512Mi"
-      cpu: "500m"
-  
-  # Upload sample files - Disabled (requires OpenShift tools image)
-  sampleFileUpload:
-    enabled: false
-    bucket: documents
-    urls: []
-
 # Llama Stack configuration for MaaS
 llama-stack:
   enabled: true
