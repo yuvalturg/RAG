@@ -12,8 +12,9 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref }}
+        # Note: For pull requests, actions/checkout@v4 automatically checks out
+        # the PR head branch. For workflow_dispatch, it checks out the default branch.
+        # Explicitly setting ref can cause issues with PR merge commits.
 
       - name: Set up Python
         uses: actions/setup-python@v5
