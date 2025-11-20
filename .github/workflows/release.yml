@@ -30,6 +30,10 @@ jobs:
           version=$(grep '^version:' ${{ matrix.chart }} | awk '{print $2}')
           echo "value=$version" >> $GITHUB_OUTPUT
 
+      - name: Delete release branch
+        run: |
+          git push origin --delete ${{ github.event.pull_request.head.ref }} || true
+
       - name: Create git tag
         run: |
           git config user.name "github-actions[bot]"
@@ -41,6 +45,10 @@ jobs:
         uses: azure/setup-helm@v4
         with:
           version: 'latest'
+
+      - name: Update Helm dependencies
+        run: |
+          helm dependency update deploy/helm/rag
 
       - name: Package Helm chart
         run: |
@@ -74,5 +82,3 @@ jobs:
           file: ${{ matrix.context }}/Containerfile
           push: true
           tags: quay.io/yuvalturg/${{ matrix.name }}:${{ steps.version.outputs.value }}
-          build-args: |
-            IMAGE_TAG=${{ steps.version.outputs.value }}
