@@ -48,9 +48,9 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.context }}/Containerfile
           push: true
-          tags: quay.io/rh-ai-quickstart/${{ matrix.name }}:${{ steps.tag.outputs.value }}
-          cache-from: type=registry,ref=quay.io/rh-ai-quickstart/${{ matrix.name }}:buildcache
-          cache-to: type=registry,ref=quay.io/rh-ai-quickstart/${{ matrix.name }}:buildcache,mode=max
+          tags: quay.io/yuvalturg/${{ matrix.name }}:${{ steps.tag.outputs.value }}
+          cache-from: type=registry,ref=quay.io/yuvalturg/${{ matrix.name }}:buildcache
+          cache-to: type=registry,ref=quay.io/yuvalturg/${{ matrix.name }}:buildcache,mode=max
 
       - name: Comment on PR with image tag
         if: github.event_name == 'pull_request'
@@ -61,5 +61,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `✅ Built image: \`quay.io/rh-ai-quickstart/${{ matrix.name }}:${{ steps.tag.outputs.value }}\``
+              body: `✅ Built image: \`quay.io/yuvalturg/${{ matrix.name }}:${{ steps.tag.outputs.value }}\``
             })
