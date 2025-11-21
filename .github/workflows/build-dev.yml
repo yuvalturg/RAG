@@ -34,7 +34,13 @@ jobs:
         id: tag
         run: |
           short_sha=$(git rev-parse --short HEAD)
-          echo "value=dev-${short_sha}" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # PR build: dev-pr123-abc1234
+            echo "value=dev-pr${{ github.event.pull_request.number }}-${short_sha}" >> $GITHUB_OUTPUT
+          else
+            # Push to dev: dev-abc1234
+            echo "value=dev-${short_sha}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -45,3 +51,15 @@ jobs:
           tags: quay.io/rh-ai-quickstart/${{ matrix.name }}:${{ steps.tag.outputs.value }}
           cache-from: type=registry,ref=quay.io/rh-ai-quickstart/${{ matrix.name }}:buildcache
           cache-to: type=registry,ref=quay.io/rh-ai-quickstart/${{ matrix.name }}:buildcache,mode=max
+
+      - name: Comment on PR with image tag
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✅ Built image: \`quay.io/rh-ai-quickstart/${{ matrix.name }}:${{ steps.tag.outputs.value }}\``
+            })
