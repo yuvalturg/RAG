@@ -1,6 +1,10 @@
 <!-- omit from toc -->
 # Centralize company knowledge with an Enterprise RAG Chatbot
 
+asdf
+
+kuku
+
 Use retrieval-augmented generation (RAG) to enhance large language models with specialized data sources for more accurate and context-aware responses.
 
 <!-- omit from toc -->
