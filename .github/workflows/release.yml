@@ -93,4 +93,4 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.context }}/Containerfile
           push: true
-          tags: quay.io/rh-ai-quickstart/${{ matrix.name }}:${{ steps.version.outputs.value }}
+          tags: quay.io/yuvalturg/${{ matrix.name }}:${{ steps.version.outputs.value }}
