@@ -31,7 +31,9 @@ jobs:
       - name: Get current version
         id: current_version
         run: |
-          version=$(grep '^version:' deploy/helm/rag/Chart.yaml | awk '{print $2}')
+          # Get version from main branch since that's the source of truth for releases
+          git fetch origin main
+          version=$(git show origin/main:deploy/helm/rag/Chart.yaml | grep '^version:' | awk '{print $2}')
           echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Calculate new version
@@ -71,6 +73,16 @@ jobs:
           git checkout -b release/v${{ steps.new_version.outputs.version }}
           git add deploy/helm/rag/Chart.yaml deploy/helm/rag/values.yaml
           git commit -m "chore: bump version to ${{ steps.new_version.outputs.version }}"
+
+          # Merge main into release branch to pre-resolve conflicts
+          git fetch origin main
+          git merge origin/main --no-edit || {
+            # If conflicts occur, take our (release branch) version for Chart.yaml and values.yaml
+            git checkout --ours deploy/helm/rag/Chart.yaml deploy/helm/rag/values.yaml
+            git add deploy/helm/rag/Chart.yaml deploy/helm/rag/values.yaml
+            git commit --no-edit
+          }
+
           git push origin release/v${{ steps.new_version.outputs.version }}
 
       - name: Create Pull Request
