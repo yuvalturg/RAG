@@ -57,12 +57,16 @@ jobs:
           sed -i "s/^version: .*/version: ${{ steps.new_version.outputs.version }}/" deploy/helm/rag/Chart.yaml
           sed -i "s/^appVersion: .*/appVersion: \"${{ steps.new_version.outputs.version }}\"/" deploy/helm/rag/Chart.yaml
 
+      - name: Update image tag to use release version
+        run: |
+          sed -i "s/tag: .*/tag: ${{ steps.new_version.outputs.version }}/" deploy/helm/rag/values.yaml
+
       - name: Commit version bump
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b release/v${{ steps.new_version.outputs.version }}
-          git add deploy/helm/rag/Chart.yaml
+          git add deploy/helm/rag/Chart.yaml deploy/helm/rag/values.yaml
           git commit -m "chore: bump version to ${{ steps.new_version.outputs.version }}"
           git push origin release/v${{ steps.new_version.outputs.version }}
 
