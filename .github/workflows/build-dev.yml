@@ -43,6 +43,8 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.context }}/Containerfile
           push: true
-          tags: quay.io/rh-ai-quickstart/${{ matrix.name }}:${{ steps.tag.outputs.value }}
+          tags: |
+            quay.io/rh-ai-quickstart/${{ matrix.name }}:${{ steps.tag.outputs.value }}
+            quay.io/rh-ai-quickstart/${{ matrix.name }}:latest-dev
           cache-from: type=registry,ref=quay.io/rh-ai-quickstart/${{ matrix.name }}:buildcache
           cache-to: type=registry,ref=quay.io/rh-ai-quickstart/${{ matrix.name }}:buildcache,mode=max
