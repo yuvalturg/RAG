@@ -18,6 +18,9 @@ on:
 jobs:
   create-release-pr:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout dev branch
         uses: actions/checkout@v4
