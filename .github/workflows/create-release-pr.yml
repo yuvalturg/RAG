@@ -31,7 +31,9 @@ jobs:
       - name: Get current version
         id: current_version
         run: |
-          version=$(grep '^version:' deploy/helm/rag/Chart.yaml | awk '{print $2}')
+          # Get version from main branch since that's the source of truth for releases
+          git fetch origin main
+          version=$(git show origin/main:deploy/helm/rag/Chart.yaml | grep '^version:' | awk '{print $2}')
           echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Calculate new version
