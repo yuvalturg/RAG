@@ -79,13 +79,9 @@ jobs:
         run: |
           gh pr create \
             --title "Release v${{ steps.new_version.outputs.version }}" \
-            --body "$(cat <<'EOF'
-          ## Release v${{ steps.new_version.outputs.version }}
+            --body "## Release v${{ steps.new_version.outputs.version }}
 
           This PR merges changes from \`dev\` to \`main\` for release v${{ steps.new_version.outputs.version }}.
-
-          ### Changes
-          $(git log main..dev --oneline --no-merges | head -20)
 
           ### Checklist
           - [ ] All tests passing
@@ -94,8 +90,6 @@ jobs:
 
           After merging, this will automatically:
           - Create git tag v${{ steps.new_version.outputs.version }}
-          - Build and push Docker images
-          EOF
-          )" \
+          - Build and push container images" \
             --base main \
             --head release/v${{ steps.new_version.outputs.version }}
