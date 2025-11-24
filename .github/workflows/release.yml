@@ -7,11 +7,27 @@ on:
       - main
 
 jobs:
+  cleanup-branch:
+    if: startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Delete release branch
+        run: |
+          git push origin --delete ${{ github.event.pull_request.head.ref }}
+
   release:
     if: |
       github.event.pull_request.merged == true &&
       startsWith(github.event.pull_request.head.ref, 'release/')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     strategy:
       matrix:
         include:
@@ -30,16 +46,12 @@ jobs:
           version=$(grep '^version:' ${{ matrix.chart }} | awk '{print $2}')
           echo "value=$version" >> $GITHUB_OUTPUT
 
-      - name: Delete release branch
-        run: |
-          git push origin --delete ${{ github.event.pull_request.head.ref }} || true
-
       - name: Create git tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ steps.version.outputs.value }}" -m "Release v${{ steps.version.outputs.value }}" || true
-          git push origin "v${{ steps.version.outputs.value }}" || true
+          git tag -a "v${{ steps.version.outputs.value }}" -m "Release v${{ steps.version.outputs.value }}"
+          git push origin "v${{ steps.version.outputs.value }}"
 
       - name: Install Helm
         uses: azure/setup-helm@v4
@@ -63,7 +75,7 @@ jobs:
             --title "Release v${{ steps.version.outputs.value }}" \
             --notes "Release v${{ steps.version.outputs.value }}" \
             --latest \
-            rag-${{ steps.version.outputs.value }}.tgz || true
+            rag-${{ steps.version.outputs.value }}.tgz
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
