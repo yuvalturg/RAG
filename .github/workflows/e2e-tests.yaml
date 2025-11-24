@@ -1,17 +1,6 @@
 name: E2E Tests
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'frontend/**'
-      - 'deploy/helm/**'
-      - 'tests/**'
-      - '.github/workflows/e2e-tests.yaml'
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 # MaaS configuration - can be overridden with repository secrets for different environments
