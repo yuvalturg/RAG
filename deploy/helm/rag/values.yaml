@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: quay.io/rh-ai-quickstart/llamastack-dist-ui
   pullPolicy: Always
-  tag: 0.2.27
+  tag: 0.2.28
 
 service:
   type: ClusterIP
@@ -165,6 +165,9 @@ configure-pipeline:
 
 ingestion-pipeline:
   enabled: true
+  serviceAccount:
+    create: true
+    name: rag-pipeline-notebook
 
 mcp-servers:
   enabled: true
