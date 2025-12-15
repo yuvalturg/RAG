@@ -116,10 +116,17 @@ class TestAgentModeChat:
             agent_radio.click()
             time.sleep(1)
         
-        # Look for agent type options with more specific selectors
-        # Check if either Regular or ReAct options exist
-        page_content = page.content()
-        assert "Regular" in page_content or "ReAct" in page_content
+        # Wait for agent type options to be visible
+        # Check if either Regular or ReAct options exist in the rendered UI
+        regular_option = page.get_by_text("Regular", exact=False)
+        react_option = page.get_by_text("ReAct", exact=False)
+        
+        # At least one of them should be visible
+        try:
+            expect(regular_option).to_be_visible(timeout=TEST_TIMEOUT)
+        except AssertionError:
+            # If Regular is not visible, ReAct should be
+            expect(react_option).to_be_visible(timeout=TEST_TIMEOUT)
 
 
 class TestConfigurationOptions:
