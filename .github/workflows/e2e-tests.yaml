@@ -647,24 +647,42 @@ jobs:
           # Verify services
           kubectl get services -n rag-e2e-ui
 
-      - name: Port forward services
+      - name: Run UI E2E tests with Playwright
+        env:
+          RAG_UI_ENDPOINT: http://localhost:8501
+          LLAMA_STACK_ENDPOINT: http://localhost:8321
+          MAAS_ENDPOINT: ${{ env.MAAS_ENDPOINT }}
+          MAAS_MODEL_ID: ${{ env.MAAS_MODEL_ID }}
+          SKIP_MODEL_TESTS: "false"  # Enable MaaS inference tests in UI
         run: |
-          echo "Starting port forwarding..."
-          # Start port forwarding in background and capture PIDs
+          echo "Starting port forwarding and running tests..."
+          
+          # Start port forwarding in background and keep them running
+          echo "Starting port forwarding for RAG UI..."
           kubectl port-forward -n rag-e2e-ui svc/rag 8501:8501 > /tmp/rag-portforward.log 2>&1 &
           RAG_PF_PID=$!
           echo "RAG port-forward PID: $RAG_PF_PID"
           
+          echo "Starting port forwarding for LlamaStack..."
           kubectl port-forward -n rag-e2e-ui svc/llamastack 8321:8321 > /tmp/llamastack-portforward.log 2>&1 &
           LLAMASTACK_PF_PID=$!
           echo "LlamaStack port-forward PID: $LLAMASTACK_PF_PID"
           
-          # Wait for port forwarding to establish and verify connectivity
+          # Function to check if port forwarding is working
+          check_port_forwarding() {
+            (timeout 2 bash -c 'cat < /dev/null > /dev/tcp/localhost/8501' 2>/dev/null) && \
+            (timeout 2 bash -c 'cat < /dev/null > /dev/tcp/localhost/8321' 2>/dev/null)
+          }
+          
+          # Function to verify processes are alive
+          check_processes() {
+            kill -0 $RAG_PF_PID 2>/dev/null && kill -0 $LLAMASTACK_PF_PID 2>/dev/null
+          }
+          
+          # Wait for port forwarding to establish
           echo "Waiting for port forwarding to be ready..."
           for i in {1..30}; do
-            # Check if ports are listening
-            if (timeout 2 bash -c 'cat < /dev/null > /dev/tcp/localhost/8501' 2>/dev/null) && \
-               (timeout 2 bash -c 'cat < /dev/null > /dev/tcp/localhost/8321' 2>/dev/null); then
+            if check_port_forwarding && check_processes; then
               echo "✅ Port forwarding is working! (attempt $i)"
               break
             fi
@@ -684,30 +702,27 @@ jobs:
             sleep 2
           done
           
-          # Verify processes are still running
-          if ! kill -0 $RAG_PF_PID 2>/dev/null || ! kill -0 $LLAMASTACK_PF_PID 2>/dev/null; then
-            echo "❌ Port forwarding processes died"
+          # Set up cleanup trap to kill port forwarding on exit
+          trap "echo 'Cleaning up port forwarding...'; kill $RAG_PF_PID $LLAMASTACK_PF_PID 2>/dev/null || true" EXIT
+          
+          echo "Running UI E2E tests with MaaS integration..."
+          echo "MaaS Endpoint: ${MAAS_ENDPOINT}"
+          echo "MaaS Model ID: ${MAAS_MODEL_ID}"
+          
+          # Run tests
+          pytest tests/e2e_ui/ -v --tb=short --browser chromium || TEST_EXIT_CODE=$?
+          
+          # Verify port forwarding was still working after tests
+          if ! check_port_forwarding; then
+            echo "⚠️  Warning: Port forwarding stopped working during tests"
             echo "RAG port-forward log:"
             cat /tmp/rag-portforward.log || true
             echo "LlamaStack port-forward log:"
             cat /tmp/llamastack-portforward.log || true
-            exit 1
           fi
           
-          echo "✅ Port forwarding verified and ready"
-
-      - name: Run UI E2E tests with Playwright
-        env:
-          RAG_UI_ENDPOINT: http://localhost:8501
-          LLAMA_STACK_ENDPOINT: http://localhost:8321
-          MAAS_ENDPOINT: ${{ env.MAAS_ENDPOINT }}
-          MAAS_MODEL_ID: ${{ env.MAAS_MODEL_ID }}
-          SKIP_MODEL_TESTS: "false"  # Enable MaaS inference tests in UI
-        run: |
-          echo "Running UI E2E tests with MaaS integration..."
-          echo "MaaS Endpoint: ${MAAS_ENDPOINT}"
-          echo "MaaS Model ID: ${MAAS_MODEL_ID}"
-          pytest tests/e2e_ui/ -v --tb=short --browser chromium
+          # Exit with test result
+          exit ${TEST_EXIT_CODE:-0}
 
       - name: Upload Playwright test results
         if: always()
