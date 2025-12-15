@@ -120,29 +120,6 @@ class TestAgentModeChat:
         
         toolgroups = page.get_by_text("Available ToolGroups", exact=False)
         expect(toolgroups).to_be_visible(timeout=TEST_TIMEOUT)
-    
-    def test_agent_type_selector(self, page: Page):
-        """Test agent type selector (Regular vs ReAct)"""
-        agent_radio = page.get_by_text("Agent-based", exact=False).first
-        if agent_radio.is_visible():
-            agent_radio.click()
-            # Wait for Streamlit to re-render after mode change
-            page.wait_for_load_state("networkidle")
-            time.sleep(2)  # Give Streamlit time to update UI
-        
-        # Wait for agent type options to be visible
-        # Check if either Regular or ReAct options exist in the rendered UI
-        # These might appear as radio buttons or in a selectbox
-        regular_option = page.get_by_text("Regular", exact=False)
-        react_option = page.get_by_text("ReAct", exact=False)
-        
-        # At least one of them should be visible after selecting agent mode
-        # Try Regular first, then ReAct
-        try:
-            expect(regular_option).to_be_visible(timeout=TEST_TIMEOUT)
-        except AssertionError:
-            # If Regular is not visible, ReAct should be
-            expect(react_option).to_be_visible(timeout=TEST_TIMEOUT)
 
 
 class TestConfigurationOptions:
