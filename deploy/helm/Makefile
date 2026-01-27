@@ -218,7 +218,7 @@ help: ## Show this help message
 	@echo -e "  SAFETY        - Enable specific safety model (e.g., llama-guard-3-8b)"
 	@echo -e "  LLM_TOLERATION - Set toleration for LLM model (e.g., nvidia.com/gpu)"
 	@echo -e "  SAFETY_TOLERATION - Set toleration for safety model"
-	@echo -e "  DEVICE        - Set device type: cpu, gpu, or hpu (default: gpu)"
+	@echo -e "  DEVICE        - Set device type: cpu, gpu, hpu or xeon (default: gpu)"
 	@echo -e "  HF_TOKEN      - Hugging Face token for model downloads"
 	@echo -e "  LLM_URL       - URL for remote LLM service"
 	@echo -e "  SAFETY_URL    - URL for remote safety service"
@@ -506,7 +506,7 @@ install: ## Install the RAG deployment
 	fi; \
 	if [ -n "$(DEVICE)" ]; then \
 		echo -e "$(BLUE)[INFO]$(NC) Setting device: $(DEVICE)"; \
-		HELM_ARGS="$$HELM_ARGS --set llm-service.device='$(DEVICE)'"; \
+		HELM_ARGS="$$HELM_ARGS --set llm-service.device=$(DEVICE)"; \
 	fi; \
 	if [ -n "$(HF_TOKEN)" ]; then \
 		echo -e "$(BLUE)[INFO]$(NC) Setting HF_TOKEN from command line"; \
