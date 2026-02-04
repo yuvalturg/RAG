@@ -312,7 +312,7 @@ show-config: ## Show configuration file contents
 # Create namespace and deploy
 namespace:
 	@echo -e "$(BLUE)[INFO]$(NC) Creating namespace $(NAMESPACE)..."
-	@oc create namespace $(NAMESPACE) &> /dev/null && oc label namespace $(NAMESPACE) modelmesh-enabled=false ||:
+	@oc new-project $(NAMESPACE) &> /dev/null ||:
 	@oc project $(NAMESPACE) &> /dev/null ||:
 	@echo -e "$(GREEN)[SUCCESS]$(NC) Namespace $(NAMESPACE) is ready"
 
