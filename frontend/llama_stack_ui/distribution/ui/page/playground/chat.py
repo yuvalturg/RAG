@@ -6,6 +6,7 @@
 
 import enum
 import json
+import os
 import sys
 import uuid
 
@@ -19,6 +20,15 @@ from llama_stack_ui.distribution.ui.modules.utils import (
     get_suggestions_for_databases,
     get_vector_db_name,
 )
+
+
+DEBUG_ENABLED = os.getenv("DEBUG", "true").lower() in ("true", "1", "yes")
+
+
+def debug(msg):
+    """Print debug message if DEBUG env var is enabled (default: true)"""
+    if DEBUG_ENABLED:
+        print(f"[DEBUG] {msg}", flush=True)
 
 
 class AgentType(enum.Enum):
@@ -616,29 +626,52 @@ def tool_chat_page():
             if tools:
                 request_kwargs["tools"] = tools
 
-            print(f"[DEBUG] Request: {request_kwargs}", flush=True)
+            debug(f"Request: {request_kwargs}")
             response = llama_stack_api.client.responses.create(**request_kwargs)
 
             # Display assistant response
             tool_used = False
+            chunk_count = 0
             for chunk in response:
+                chunk_count += 1
+                debug(f"Chunk #{chunk_count}: type={getattr(chunk, 'type', 'NO_TYPE')}")
+
                 if hasattr(chunk, 'type'):
                     if chunk.type == "response.file_search_call.in_progress":
+                        debug("  -> File search tool in progress")
                         if not tool_used:
                             full_response += "\n\n🔧 *Using file_search tool...*\n\n"
                             message_placeholder.markdown(full_response + "▌")
                             tool_used = True
+
                     elif chunk.type == "response.output_text.delta":
                         if hasattr(chunk, 'delta') and chunk.delta:
+                            debug(f"  -> Delta text: {chunk.delta[:100]}...")
                             full_response += chunk.delta
                             message_placeholder.markdown(full_response + "▌")
+
+                    elif chunk.type == "response.failed":
+                        debug(f"  -> RESPONSE FAILED!")
+                        debug(f"  -> Full chunk: {chunk}")
+                        if hasattr(chunk, 'error'):
+                            debug(f"  -> Error: {chunk.error}")
+                        if hasattr(chunk, 'response'):
+                            debug(f"  -> Response object: {chunk.response}")
+                        full_response += "\n\n❌ **Error**: Response failed. Check logs for details.\n"
+                        message_placeholder.markdown(full_response)
+
                     elif chunk.type == "response.done":
-                        if hasattr(chunk, 'response') and hasattr(chunk.response, 'output_text'):
-                            if chunk.response.output_text:
-                                full_response = rag_info + chunk.response.output_text
+                        has_output = (
+                            hasattr(chunk, 'response') and
+                            hasattr(chunk.response, 'output_text') and
+                            chunk.response.output_text
+                        )
+                        debug(f"  -> Response done, has_output={has_output}")
+                        if has_output:
+                            full_response = rag_info + chunk.response.output_text
 
             message_placeholder.markdown(full_response)
-            print(f"[DEBUG] Final response: {full_response}", flush=True)
+            debug(f"Response complete. Total chunks: {chunk_count}, Length: {len(full_response)}")
 
         response_dict = {
             "role": "assistant",
