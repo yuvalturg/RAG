@@ -35,6 +35,70 @@ class AgentType(enum.Enum):
     REGULAR = "Regular"
     REACT = "ReAct"
 
+
+def build_response_tools(toolgroup_selection, selected_vector_dbs, client):
+    """
+    Convert toolgroup selections to LlamaStack Responses API compatible tool format.
+
+    Args:
+        toolgroup_selection: List of selected toolgroup IDs
+        selected_vector_dbs: List of selected vector database names
+        client: LlamaStack client instance
+
+    Returns:
+        List of tools in Responses API format (works for both Agent and Direct modes)
+    """
+    agent_tools = []
+
+    for toolgroup_name in toolgroup_selection:
+        if toolgroup_name == "builtin::rag":
+            if len(selected_vector_dbs) > 0:
+                vector_dbs = client.vector_stores.list() or []
+                vector_db_ids = [
+                    vector_db.id for vector_db in vector_dbs
+                    if get_vector_db_name(vector_db) in selected_vector_dbs
+                ]
+                # Use file_search tool format
+                agent_tools.append({
+                    "type": "file_search",
+                    "vector_store_ids": list(vector_db_ids),
+                })
+        elif "web_search" in toolgroup_name or "search" in toolgroup_name.lower():
+            # Convert search tools to web_search format
+            agent_tools.append({"type": "web_search"})
+        elif toolgroup_name.startswith("mcp::"):
+            # For MCP tools, get server info
+            try:
+                toolgroups = client.toolgroups.list()
+                for toolgroup in toolgroups:
+                    if str(toolgroup.identifier) == toolgroup_name:
+                        agent_tools.append({
+                            "type": "mcp",
+                            "server_label": toolgroup.args.get("name", str(toolgroup.identifier)),
+                            "server_url": toolgroup.mcp_endpoint.uri,
+                        })
+                        break
+            except Exception as e:
+                debug(f"Failed to get MCP server info for {toolgroup_name}: {e}")
+        else:
+            # For other toolgroups, get individual tools and convert to function format
+            try:
+                tools_in_group = client.tools.list(toolgroup_id=toolgroup_name)
+                for tool in tools_in_group:
+                    # Convert to function tool dict
+                    agent_tools.append({
+                        "type": "function",
+                        "function": {
+                            "name": tool.name,
+                            "description": tool.description or "",
+                            "parameters": tool.parameters or {}
+                        }
+                    })
+            except Exception as e:
+                debug(f"Failed to get tools for {toolgroup_name}: {e}")
+
+    return agent_tools
+
 def get_strategy(temperature, top_p):
     """Determines the sampling strategy for the LLM based on temperature."""
     return {'type': 'greedy'} if temperature == 0 else {
@@ -55,6 +119,11 @@ def render_history(tool_debug):
 
     for i, msg in enumerate(st.session_state.messages):
         with st.chat_message(msg['role']):
+            # Display reasoning if present
+            if msg.get('reasoning'):
+                with st.expander("🧠 Reasoning", expanded=False):
+                    st.markdown(msg['reasoning'])
+
             st.markdown(msg['content'])
 
             # Display debug events expander for assistant messages (excluding the initial greeting)
@@ -156,6 +225,9 @@ def tool_chat_page():
                 options=vector_db_names,
                 on_change=reset_agent,
             )
+            # Add builtin::rag to toolgroup_selection if vector DBs are selected
+            if selected_vector_dbs:
+                toolgroup_selection = ["builtin::rag"]
         if processing_mode == "Agent-based":
             st.subheader("Available ToolGroups")
 
@@ -248,22 +320,9 @@ def tool_chat_page():
 
     updated_toolgroup_selection = []
     if processing_mode == "Agent-based":
-        for _, tool_name in enumerate(toolgroup_selection):
-            if tool_name == "builtin::rag":
-                if len(selected_vector_dbs) > 0:
-                    vector_dbs = llama_stack_api.client.vector_stores.list() or []
-                    vector_db_ids = [
-                        vector_db.id for vector_db in vector_dbs
-                        if get_vector_db_name(vector_db) in selected_vector_dbs
-                    ]
-                    # Use the new file_search tool format
-                    tool_dict = {
-                        "type": "file_search",
-                        "vector_store_ids": list(vector_db_ids),
-                    }
-                    updated_toolgroup_selection.append(tool_dict)
-            else:
-                updated_toolgroup_selection.append(tool_name)
+        updated_toolgroup_selection = build_response_tools(
+            toolgroup_selection, selected_vector_dbs, client
+        )
 
     @st.cache_resource
     def create_agent():
@@ -392,8 +451,12 @@ def tool_chat_page():
         current_step_content = ""
         final_answer = None
         tool_results = []
+        chunk_count = 0
 
         for response in turn_response:
+            chunk_count += 1
+            debug(f"ReAct chunk #{chunk_count}")
+
             if not hasattr(response.event, "payload"):
                 yield (
                     "\n\n🚨 :red[_Llama Stack server Error:_]\n"
@@ -405,13 +468,16 @@ def tool_chat_page():
                 return
 
             payload = response.event.payload
+            debug(f"  -> event_type={payload.event_type}")
 
             if payload.event_type == "step_progress" and hasattr(payload.delta, "text"):
+                debug(f"  -> text delta: {payload.delta.text[:50]}...")
                 current_step_content += payload.delta.text
                 continue
 
             if payload.event_type == "step_complete":
                 step_details = payload.step_details
+                debug(f"  -> step_type={step_details.step_type}")
 
                 if step_details.step_type == "inference":
                     yield from _process_inference_step(
@@ -547,69 +613,93 @@ def tool_chat_page():
                     yield f"- {first_value}\n"
 
     def _handle_regular_response(turn_response, debug_events_list):
+        chunk_count = 0
         for chunk in turn_response:
+            chunk_count += 1
             if hasattr(chunk, 'event') and chunk.event:
                 event = chunk.event
                 event_type = getattr(event, 'event_type', None)
+                debug(f"Agent chunk #{chunk_count}: event_type={event_type}")
 
                 if event_type == 'step_progress':
                     # Handle text deltas from StepProgress events
                     if hasattr(event, 'delta') and hasattr(event.delta, 'text'):
-                        yield event.delta.text
+                        text_delta = event.delta.text
+                        debug(f"  -> text delta: {text_delta[:100]}...")
+                        yield text_delta
+                    # Handle tool call issued events
+                    elif hasattr(event, 'delta') and hasattr(event.delta, 'delta_type'):
+                        if event.delta.delta_type == 'tool_call_issued':
+                            tool_name = getattr(event.delta, 'tool_name', 'unknown')
+                            tool_type = getattr(event.delta, 'tool_type', 'unknown')
+                            debug(f"  -> tool call issued: {tool_type}/{tool_name}")
+                            yield f'\n\n🛠 :grey[_Using "{tool_type}" tool..._]\n\n'
+                    else:
+                        debug(f"  -> step_progress (no text): {event}")
 
                 elif event_type == 'step_completed':
+                    debug(f"  -> step completed")
                     # Handle completed steps
                     if hasattr(event, 'result'):
                         result = event.result
+                        debug(f"  -> result: {result}")
                         # Check for tool executions
                         if hasattr(result, 'function_calls') and result.function_calls:
                             for func_call in result.function_calls:
                                 tool_name = getattr(func_call, 'tool_name', 'unknown')
+                                debug(f"  -> function call: {tool_name}")
                                 yield f'\n\n🛠 :grey[_Using "{tool_name}" tool:_]\n\n'
 
                 elif event_type == 'turn_completed':
                     # Log completion for debugging
+                    debug(f"  -> turn completed")
                     debug_events_list.append({
                         "type": "turn_completed",
                         "turn_id": getattr(event, 'turn_id', 'unknown'),
                         "num_steps": getattr(event, 'num_steps', 0)
                     })
+                else:
+                    debug(f"  -> unhandled event type, event: {event}")
 
     def agent_process_prompt(prompt, debug_events_list):
         # Send the prompt to the agent
+        debug(f"Agent request: session_id={session_id}, prompt={prompt[:100]}...")
+        debug(f"Agent tools: {updated_toolgroup_selection}")
+
         turn_response = agent.create_turn(
             session_id=session_id,
             messages=[UserMessage(role="user", content=prompt)],
             stream=True,
         )
         response_content = st.write_stream(response_generator(turn_response, debug_events_list))
+
+        debug(f"Agent response complete: {len(response_content)} chars")
         st.session_state.messages.append({"role": "assistant", "content": response_content})
 
 
     def direct_process_prompt(prompt, debug_events_list):
-        # Build tools list if vector stores are selected
-        tools = None
+        # Build tools list using the same function as Agent mode
+        tools = build_response_tools(
+            toolgroup_selection, selected_vector_dbs, llama_stack_api.client
+        ) if toolgroup_selection else None
+
+        # Build RAG info message if vector stores are selected
         rag_info = ""
-
         if selected_vector_dbs:
-            vector_dbs = llama_stack_api.client.vector_stores.list() or []
-            vector_db_ids = [
-                vector_db.id for vector_db in vector_dbs
-                if get_vector_db_name(vector_db) in selected_vector_dbs
-            ]
-
-            if vector_db_ids:
-                tools = [{
-                    "type": "file_search",
-                    "vector_store_ids": list(vector_db_ids)
-                }]
-                rag_info = (
-                    f"\n\n🔍 *Searching {len(vector_db_ids)} document collection(s): "
-                    f"{', '.join(selected_vector_dbs)}*\n\n"
-                )
+            db_label = "vector store" if len(selected_vector_dbs) == 1 else "vector stores"
+            rag_info = (
+                f"\n\n📚 *Enabled {db_label}: {', '.join(selected_vector_dbs)}*\n\n"
+            )
 
         with st.chat_message("assistant"):
+            # Create containers for dynamic content
+            reasoning_container = st.empty()
             message_placeholder = st.empty()
+
+            reasoning_text = ""
+            has_reasoning = False
+            reasoning_expander = None
+            reasoning_placeholder = None
             full_response = rag_info
 
             # Use responses API for Direct mode
@@ -632,6 +722,7 @@ def tool_chat_page():
             # Display assistant response
             tool_used = False
             chunk_count = 0
+
             for chunk in response:
                 chunk_count += 1
                 debug(f"Chunk #{chunk_count}: type={getattr(chunk, 'type', 'NO_TYPE')}")
@@ -644,6 +735,22 @@ def tool_chat_page():
                             message_placeholder.markdown(full_response + "▌")
                             tool_used = True
 
+                    elif chunk.type == "response.reasoning_text.delta":
+                        if hasattr(chunk, 'delta') and chunk.delta:
+                            debug(f"  -> Reasoning delta: {chunk.delta[:100]}...")
+                            reasoning_text += chunk.delta
+
+                            # Create reasoning expander on first delta
+                            if not has_reasoning:
+                                has_reasoning = True
+                                with reasoning_container.container():
+                                    reasoning_expander = st.expander("🧠 Reasoning", expanded=True)
+                                    reasoning_placeholder = reasoning_expander.empty()
+
+                            # Update reasoning text
+                            if reasoning_placeholder:
+                                reasoning_placeholder.markdown(reasoning_text + "▌")
+
                     elif chunk.type == "response.output_text.delta":
                         if hasattr(chunk, 'delta') and chunk.delta:
                             debug(f"  -> Delta text: {chunk.delta[:100]}...")
@@ -653,11 +760,29 @@ def tool_chat_page():
                     elif chunk.type == "response.failed":
                         debug(f"  -> RESPONSE FAILED!")
                         debug(f"  -> Full chunk: {chunk}")
-                        if hasattr(chunk, 'error'):
-                            debug(f"  -> Error: {chunk.error}")
-                        if hasattr(chunk, 'response'):
+                        error_msg = "Unknown error"
+                        error_code = None
+
+                        # Try to get error from chunk.error first
+                        if hasattr(chunk, 'error') and chunk.error:
+                            error_msg = str(chunk.error)
+                            debug(f"  -> Chunk error: {error_msg}")
+
+                        # Try to get error from chunk.response.error
+                        if hasattr(chunk, 'response') and chunk.response:
                             debug(f"  -> Response object: {chunk.response}")
-                        full_response += "\n\n❌ **Error**: Response failed. Check logs for details.\n"
+                            if hasattr(chunk.response, 'error') and chunk.response.error:
+                                error_obj = chunk.response.error
+                                if hasattr(error_obj, 'code'):
+                                    error_code = error_obj.code
+                                if hasattr(error_obj, 'message'):
+                                    error_msg = error_obj.message
+                                debug(f"  -> Error code: {error_code}, message: {error_msg}")
+
+                        if error_code:
+                            full_response += f"\n\n❌ **Error ({error_code})**: {error_msg}\n"
+                        else:
+                            full_response += f"\n\n❌ **Error**: {error_msg}\n"
                         message_placeholder.markdown(full_response)
 
                     elif chunk.type == "response.done":
@@ -670,6 +795,10 @@ def tool_chat_page():
                         if has_output:
                             full_response = rag_info + chunk.response.output_text
 
+            # Finalize displays (remove cursor)
+            if has_reasoning and reasoning_placeholder:
+                reasoning_placeholder.markdown(reasoning_text)
+
             message_placeholder.markdown(full_response)
             debug(f"Response complete. Total chunks: {chunk_count}, Length: {len(full_response)}")
 
@@ -678,6 +807,9 @@ def tool_chat_page():
             "content": full_response,
             "stop_reason": "end_of_message"
         }
+        # Save reasoning if present
+        if has_reasoning and reasoning_text:
+            response_dict["reasoning"] = reasoning_text
         st.session_state.messages.append(response_dict)
 
     def process_prompt(prompt):
