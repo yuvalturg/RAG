@@ -19,7 +19,7 @@ dependencies:
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
     condition: configure-pipeline.enabled
   - name: ingestion-pipeline
-    version: 0.6.4
+    version: 0.6.5
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
     condition: ingestion-pipeline.enabled
   - name: llama-stack
