@@ -10,16 +10,10 @@ import uuid
 
 import streamlit as st
 from llama_stack_client.lib.agents.agent import Agent
-from llama_stack_client.lib.agents.event_logger import  EventLogger
 from llama_stack_client.lib.agents.react.agent import ReActAgent
-from llama_stack_client.lib.agents.react.tool_parser import ReActOutput
-from llama_stack.apis.common.content_types import ToolCallDelta
 from llama_stack_ui.distribution.ui.modules.api import llama_stack_api
 from llama_stack_ui.distribution.ui.modules.utils import get_suggestions_for_databases, get_vector_db_name
 from llama_stack_client.types import UserMessage
-from llama_stack_client.types.shared_params import SamplingParams
-from llama_stack_client.types.shared_params.response_format import JsonSchemaResponseFormat
-from llama_stack_client.types.shared_params.sampling_params import StrategyTopPSamplingStrategy
 
 
 class AgentType(enum.Enum):
@@ -107,7 +101,7 @@ def tool_chat_page():
         st.subheader("Model")
         model = st.selectbox(label="Model", options=model_list, on_change=reset_agent, label_visibility="collapsed")
 
-        ## Added mode 
+        ## Added mode
         processing_mode = st.radio(
             "Processing mode",
             ["Direct", "Agent-based"],
@@ -120,10 +114,10 @@ def tool_chat_page():
             help="Choose how requests are processed. 'Direct' bypasses agents, 'Agent-based' uses them.",
         )
 
-        
+
         toolgroup_selection = []
         if processing_mode == "Direct":
-            vector_dbs = llama_stack_api.client.vector_dbs.list() or []
+            vector_dbs = llama_stack_api.client.vector_stores.list() or []
             if not vector_dbs:
                 st.info("No vector databases available for selection.")
             vector_db_names = [get_vector_db_name(vector_db) for vector_db in vector_dbs]
@@ -145,7 +139,7 @@ def tool_chat_page():
             )
 
             if "builtin::rag" in toolgroup_selection:
-                vector_dbs = llama_stack_api.client.vector_dbs.list() or []
+                vector_dbs = llama_stack_api.client.vector_stores.list() or []
                 if not vector_dbs:
                     st.info("No vector databases available for selection.")
                 vector_db_names = [get_vector_db_name(vector_db) for vector_db in vector_dbs]
@@ -173,7 +167,7 @@ def tool_chat_page():
 
             for toolgroup_id in toolgroup_selection:
                 tools = client.tools.list(toolgroup_id=toolgroup_id)
-                grouped_tools[toolgroup_id] = [tool.identifier for tool in tools]
+                grouped_tools[toolgroup_id] = [tool.name for tool in tools]
                 total_tools += len(tools)
 
             st.markdown(f"Active Tools: 🛠 {total_tools}")
@@ -196,22 +190,24 @@ def tool_chat_page():
             # else:
             #     agent_type = AgentType.REGULAR
             agent_type = AgentType.REGULAR
-        
-        if processing_mode == "Agent-based":
-            input_shields = []
-            output_shields = []
-
-            st.subheader("Security Shields")
-            shields_available = client.shields.list()
-            shield_options = [s.identifier for s in shields_available if hasattr(s, 'identifier')]
-            input_shields = st.multiselect("Input Shields", options=shield_options, on_change=reset_agent)
-            output_shields = st.multiselect("Output Shields", options=shield_options, on_change=reset_agent)
 
         st.subheader("Sampling Parameters")
-        temperature = st.slider("Temperature", 0.0, 2.0, 0.1, 0.05, on_change=reset_agent)
-        top_p = st.slider("Top P", 0.0, 1.0, 0.95, 0.05, on_change=reset_agent)
-        max_tokens = st.slider("Max Tokens", 1, 4096, 512, 64, on_change=reset_agent)
-        repetition_penalty = st.slider("Repetition Penalty", 1.0, 2.0, 1.0, 0.05, on_change=reset_agent)
+
+        # Temperature - supported in both modes
+        temperature = st.slider(
+            "Temperature",
+            0.0, 2.0, 0.1, 0.05,
+            on_change=reset_agent,
+            help="Controls randomness. Higher values = more random. (Direct mode only in v0.3.3)"
+        )
+
+        # Max inference iterations - supported in both modes
+        max_infer_iters = st.slider(
+            "Max Inference Iterations",
+            1, 50, 10, 1,
+            on_change=reset_agent,
+            help="Maximum number of inference iterations before stopping (Direct mode only in v0.3.3)"
+        )
 
         st.subheader("System Prompt")
         default_prompt = "You are a helpful AI assistant."
@@ -228,64 +224,45 @@ def tool_chat_page():
         if st.button("Clear Chat & Reset Config", use_container_width=True):
             reset_agent()
             st.rerun()
-    
+
 
     updated_toolgroup_selection = []
     if processing_mode == "Agent-based":
         for i, tool_name in enumerate(toolgroup_selection):
             if tool_name == "builtin::rag":
                 if len(selected_vector_dbs) > 0:
-                    vector_dbs = llama_stack_api.client.vector_dbs.list() or []
-                    vector_db_ids = [vector_db.identifier for vector_db in vector_dbs if get_vector_db_name(vector_db) in selected_vector_dbs]
-                    tool_dict = dict(
-                        name="builtin::rag/knowledge_search",
-                        args={
-                            "vector_db_ids": list(vector_db_ids),
-                            # Defaults
-                            "query_config": {
-                                "chunk_size_in_tokens": 512,
-                                "chunk_overlap_in_tokens": 50,
-                            },
-                        },
-                    )
+                    vector_dbs = llama_stack_api.client.vector_stores.list() or []
+                    vector_db_ids = [vector_db.id for vector_db in vector_dbs if get_vector_db_name(vector_db) in selected_vector_dbs]
+                    # Use the new file_search tool format
+                    tool_dict = {
+                        "type": "file_search",
+                        "vector_store_ids": list(vector_db_ids),
+                    }
                     updated_toolgroup_selection.append(tool_dict)
             else:
                 updated_toolgroup_selection.append(tool_name)
 
     @st.cache_resource
     def create_agent():
+        # Version 0.3.3 of llama-stack-client has a simplified Agent API
+        # It doesn't support sampling_params, shields, etc. directly
+        # Those are configured on the server side
+
         if "agent_type" in st.session_state and st.session_state.agent_type == AgentType.REACT:
             return ReActAgent(
                 client=client,
                 model=model,
                 tools=updated_toolgroup_selection,
-                response_format=JsonSchemaResponseFormat(
-                    type="json_schema",
-                    json_schema=ReActOutput.model_json_schema()
-                ),
-                sampling_params=SamplingParams(
-                    strategy=StrategyTopPSamplingStrategy(type="top_p", temperature=temperature, top_p=top_p),
-                    max_tokens=max_tokens,
-                    repetition_penalty=repetition_penalty,
-                ),
-                input_shields= input_shields,
-                output_shields= output_shields,
+                json_response_format=True,
             )
         else:
             updated_system_prompt = system_prompt.strip()
             updated_system_prompt = updated_system_prompt if updated_system_prompt.strip().endswith('.') else updated_system_prompt + '.'
             return Agent(
-                client,
+                client=client,
                 model=model,
                 instructions=f"{updated_system_prompt} When you use a tool always respond with a summary of the result.",
                 tools=updated_toolgroup_selection,
-                sampling_params=SamplingParams(
-                    strategy=StrategyTopPSamplingStrategy(type="top_p", temperature=temperature, top_p=top_p),
-                    max_tokens=max_tokens,
-                    repetition_penalty=repetition_penalty,
-                ),
-                input_shields= input_shields,
-                output_shields= output_shields,
             )
 
     if processing_mode == "Agent-based":
@@ -299,13 +276,13 @@ def tool_chat_page():
 
     if "messages" not in st.session_state:
         st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?", "stop_reason": "end_of_turn"}]
-    
+
     if "debug_events" not in st.session_state: # Per-turn debug logs
         st.session_state["debug_events"] = []
-    
+
     if "show_more_questions" not in st.session_state:
         st.session_state["show_more_questions"] = False
-    
+
     if "selected_question" not in st.session_state:
         st.session_state["selected_question"] = None
 
@@ -316,18 +293,18 @@ def tool_chat_page():
         """Display suggested questions based on selected databases."""
         if not selected_vector_dbs:
             return
-        
-        vector_dbs = llama_stack_api.client.vector_dbs.list() or []
+
+        vector_dbs = llama_stack_api.client.vector_stores.list() or []
         suggestions = get_suggestions_for_databases(selected_vector_dbs, vector_dbs)
-        
+
         if not suggestions:
             return
-        
+
         st.markdown("### 💡 Suggested Questions")
-        
+
         # Determine how many questions to show
         num_to_show = len(suggestions) if st.session_state.show_more_questions else min(4, len(suggestions))
-        
+
         # Display questions in a grid-like format using columns
         cols_per_row = 2
         for i in range(0, num_to_show, cols_per_row):
@@ -347,7 +324,7 @@ def tool_chat_page():
                         ):
                             st.session_state.selected_question = question
                             st.rerun()
-        
+
         # Show "Show More" or "Show Less" button if there are more than 4 questions
         if len(suggestions) > 4:
             col1, col2, col3 = st.columns([1, 1, 1])
@@ -360,9 +337,9 @@ def tool_chat_page():
                     if st.button(f"Show More ({len(suggestions) - 4} more)", use_container_width=True):
                         st.session_state.show_more_questions = True
                         st.rerun()
-        
+
         st.markdown("---")
-    
+
     display_suggested_questions()
 
     def response_generator(turn_response, debug_events_list):
@@ -518,114 +495,100 @@ def tool_chat_page():
                     yield f"- {first_value}\n"
 
     def _handle_regular_response(turn_response, debug_events_list):
+        for chunk in turn_response:
+            if hasattr(chunk, 'event') and chunk.event:
+                event = chunk.event
+                event_type = getattr(event, 'event_type', None)
 
-        # Use itertools.tee to duplicate the stream for UI and debug logging
-        # This is crucial because a generator can only be consumed once.
-        from itertools import tee
-        ui_stream, debug_log_stream = tee(turn_response, 2)
+                if event_type == 'step_progress':
+                    # Handle text deltas from StepProgress events
+                    if hasattr(event, 'delta') and hasattr(event.delta, 'text'):
+                        yield event.delta.text
 
-        for response in ui_stream:
-            if hasattr(response.event, "payload"):
-                if response.event.payload.event_type == "step_progress":
-                    if hasattr(response.event.payload.delta, "text"):
-                        yield response.event.payload.delta.text
-                if response.event.payload.event_type == "step_complete":
-                    if response.event.payload.step_details.step_type == "tool_execution":
-                        if response.event.payload.step_details.tool_calls:
-                            tool_name = str(response.event.payload.step_details.tool_calls[0].tool_name)
-                            yield f'\n\n🛠 :grey[_Using "{tool_name}" tool:_]\n\n'
-                        else:
-                            yield "No tool_calls present in step_details"
-                    if response.event.payload.step_details.step_type == "shield_call":
-                        if response.event.payload.step_details.violation:
-                            yield response.event.payload.step_details.violation.user_message
-            else:
-                yield f"Error occurred in the Llama Stack Cluster: {response}"
-                debug_events_list.append({"type": "warning", "source": "_handle_regular_response", "details": "Unexpected event structure", "event": str(response)[:200]})
+                elif event_type == 'step_completed':
+                    # Handle completed steps
+                    if hasattr(event, 'result'):
+                        result = event.result
+                        # Check for tool executions
+                        if hasattr(result, 'function_calls') and result.function_calls:
+                            for func_call in result.function_calls:
+                                tool_name = getattr(func_call, 'tool_name', 'unknown')
+                                yield f'\n\n🛠 :grey[_Using "{tool_name}" tool:_]\n\n'
 
-        # Process the debug log stream separately
-        # EventLogger helps parse and structure these events
-        for log_entry in EventLogger().log(debug_log_stream):
-            if log_entry.role == "tool_execution": # Or other relevant roles
-                debug_events_list.append({"type": "tool_log", "content": log_entry.content})
-            # Add other log types as needed for debugging
+                elif event_type == 'turn_completed':
+                    # Log completion for debugging
+                    debug_events_list.append({
+                        "type": "turn_completed",
+                        "turn_id": getattr(event, 'turn_id', 'unknown'),
+                        "num_steps": getattr(event, 'num_steps', 0)
+                    })
 
     def agent_process_prompt(prompt, debug_events_list):
-        print(f"In agent_process_prompt: {prompt}")
         # Send the prompt to the agent
         turn_response = agent.create_turn(
             session_id=session_id,
             messages=[UserMessage(role="user", content=prompt)],
             stream=True,
         )
-        print(f"In agent_process_prompt: {turn_response}")
         response_content = st.write_stream(response_generator(turn_response, debug_events_list))
-        print(f"In agent_process_prompt: {response_content}")
         st.session_state.messages.append({"role": "assistant", "content": response_content})
 
 
     def direct_process_prompt(prompt, debug_events_list):
-        # Query the vector DB
+        # Build tools list if vector stores are selected
+        tools = None
+        rag_info = ""
+
         if selected_vector_dbs:
-            vector_dbs = llama_stack_api.client.vector_dbs.list() or []
-            vector_db_ids = [vector_db.identifier for vector_db in vector_dbs if get_vector_db_name(vector_db) in selected_vector_dbs]
-            with st.spinner("Retrieving context (RAG)..."):
-                try:
-                    rag_response = llama_stack_api.client.tool_runtime.rag_tool.query(
-                        content=prompt, vector_db_ids=list(vector_db_ids)
-                    )
-                    prompt_context = rag_response.content
-                    debug_events_list.append({
-                        "type": "rag_query_direct_mode", "query": prompt,
-                        "vector_dbs": selected_vector_dbs,
-                        "context_length": len(prompt_context) if prompt_context else 0,
-                        "context_preview": (str(prompt_context[:200]) + "..." if prompt_context else "None")
-                    })
-                except Exception as e:
-                    st.warning(f"RAG Error (Direct Mode): {e}")
-                    debug_events_list.append({"type": "error", "source": "rag_direct_mode", "content": str(e)})
-        else:
-            prompt_context = None
-        
+            vector_dbs = llama_stack_api.client.vector_stores.list() or []
+            vector_db_ids = [vector_db.id for vector_db in vector_dbs if get_vector_db_name(vector_db) in selected_vector_dbs]
+
+            if vector_db_ids:
+                tools = [{
+                    "type": "file_search",
+                    "vector_store_ids": list(vector_db_ids)
+                }]
+                rag_info = f"\n\n🔍 *Searching {len(vector_db_ids)} document collection(s): {', '.join(selected_vector_dbs)}*\n\n"
+
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
-            full_response = ""
-            retrieval_response = ""
+            full_response = rag_info
 
-            # Construct the extended prompt
-            if prompt_context:
-                extended_prompt = f"Please answer the following query using the context below.\n\nCONTEXT:\n{prompt_context}\n\nQUERY:\n{prompt}"
-            else:
-                extended_prompt = f"Please answer the following query. \n\nQUERY:\n{prompt}"
+            # Use responses API for Direct mode
+            input_text = f"{system_prompt}\n\nUser: {prompt}"
 
-            # Run inference directly
-            #st.session_state.messages.append({"role": "user", "content": extended_prompt})
-            messages_for_direct_api = (
-                [{'role': 'system', 'content': system_prompt}] +
-                [{'role': 'user', 'content': extended_prompt}]
-            )
-            response = llama_stack_api.client.inference.chat_completion(
-                messages=messages_for_direct_api,
-                model_id=model,
-                sampling_params={
-                    "strategy": get_strategy(temperature, top_p),
-                    "max_tokens": max_tokens,
-                    "repetition_penalty": repetition_penalty,
-                },
-                stream=True,
-                timeout=120,
-            )
+            request_kwargs = {
+                "model": model,
+                "input": input_text,
+                "temperature": temperature,
+                "max_infer_iters": max_infer_iters,
+                "stream": True,
+            }
+
+            # Add tools if RAG is enabled
+            if tools:
+                request_kwargs["tools"] = tools
+
+            response = llama_stack_api.client.responses.create(**request_kwargs)
 
             # Display assistant response
+            tool_used = False
             for chunk in response:
-                if chunk.event:
-                    response_delta = chunk.event.delta
-                    if isinstance(response_delta, ToolCallDelta):
-                        retrieval_response += response_delta.tool_call.replace("====", "").strip()
-                        #retrieval_message_placeholder.info(retrieval_response)
-                    else:
-                        full_response += chunk.event.delta.text
-                        message_placeholder.markdown(full_response + "▌")
+                if hasattr(chunk, 'type'):
+                    if chunk.type == "response.file_search_call.in_progress":
+                        if not tool_used:
+                            full_response += "\n\n🔧 *Using file_search tool...*\n\n"
+                            message_placeholder.markdown(full_response + "▌")
+                            tool_used = True
+                    elif chunk.type == "response.output_text.delta":
+                        if hasattr(chunk, 'delta') and chunk.delta:
+                            full_response += chunk.delta
+                            message_placeholder.markdown(full_response + "▌")
+                    elif chunk.type == "response.done":
+                        if hasattr(chunk, 'response') and hasattr(chunk.response, 'output_text'):
+                            if chunk.response.output_text:
+                                full_response = rag_info + chunk.response.output_text
+
             message_placeholder.markdown(full_response)
 
         response_dict = {"role": "assistant", "content": full_response, "stop_reason": "end_of_message"}
@@ -633,25 +596,19 @@ def tool_chat_page():
         #st.session_state.displayed_messages.append(response_dict)
 
     def process_prompt(prompt):
-        print(f"In process_prompt: {prompt}")
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
-        
+
         # Prepare for assistant's response
         # Each assistant turn gets its own list for debug events
         st.session_state.debug_events.append([])
-        current_turn_debug_events_list = st.session_state.debug_events[-1] # Get the list for this turn
+        current_turn_debug_events_list = st.session_state.debug_events[-1]
 
-        st.session_state.prompt = prompt
-
-        print(f"In process_prompt: {st.session_state.prompt}")
-        print(f"In processing mode: {processing_mode}")
         if processing_mode == "Agent-based":
-            agent_process_prompt(st.session_state.prompt, current_turn_debug_events_list)
-        else:  # rag_mode == "Direct"
-            direct_process_prompt(st.session_state.prompt, current_turn_debug_events_list)
-        #st.session_state.prompt = None
+            agent_process_prompt(prompt, current_turn_debug_events_list)
+        else:
+            direct_process_prompt(prompt, current_turn_debug_events_list)
         st.rerun()
 
     # Handle selected question from suggestions
@@ -660,15 +617,15 @@ def tool_chat_page():
         st.session_state.selected_question = None  # Clear the selected question
 
         process_prompt(prompt)
-        
-    
+
+
     # Handle manual chat input
     if prompt := st.chat_input(placeholder="Ask a question..."):
         # Append the user message to history and display it
         process_prompt(prompt)
-       
 
-    
+
+
 
 
 tool_chat_page()

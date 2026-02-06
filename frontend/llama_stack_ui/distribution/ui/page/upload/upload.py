@@ -4,47 +4,12 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-import asyncio
-import asyncpg
 import os
 import streamlit as st
 import traceback
 
-from llama_stack_ui.distribution.ui.modules.utils import get_vector_db_name, data_url_from_file
+from llama_stack_ui.distribution.ui.modules.utils import get_vector_db_name
 from llama_stack_ui.distribution.ui.modules.api import llama_stack_api
-from llama_stack_client import RAGDocument
-
-
-# Module-level connection pool (initialized lazily)
-_pg_pool = None
-
-
-async def _get_pg_pool():
-    """
-    Get or create the PostgreSQL connection pool.
-    The pool is created lazily on first use and reused for subsequent calls.
-    
-    Returns:
-        asyncpg.Pool: The connection pool instance
-    """
-    global _pg_pool
-    if _pg_pool is None:
-        pg_host = os.environ.get("PGVECTOR_HOST", "pgvector")
-        pg_port = os.environ.get("PGVECTOR_PORT", "5432")
-        pg_user = os.environ.get("PGVECTOR_USER", "postgres")
-        pg_password = os.environ.get("PGVECTOR_PASSWORD", "rag_password")
-        pg_database = os.environ.get("PGVECTOR_DB", "rag_blueprint")
-        
-        _pg_pool = await asyncpg.create_pool(
-            host=pg_host,
-            port=int(pg_port),
-            user=pg_user,
-            password=pg_password,
-            database=pg_database,
-            min_size=1,
-            max_size=5,
-        )
-    return _pg_pool
 
 
 def upload_page():
@@ -87,7 +52,7 @@ def upload_page():
         st.session_state["creation_message"] = ""
     
     # Fetch all vector databases
-    vdb_list = llama_stack_api.client.vector_dbs.list()
+    vdb_list = llama_stack_api.client.vector_stores.list()
     
     # Build dropdown options based on whether databases exist
     dropdown_options = []
@@ -215,33 +180,18 @@ def _create_vector_database(vdb_name):
             return
             
         # Check for duplicate names
-        existing_vdbs = llama_stack_api.client.vector_dbs.list()
+        existing_vdbs = llama_stack_api.client.vector_stores.list()
         existing_names = [get_vector_db_name(vdb) for vdb in existing_vdbs]
         if vdb_name in existing_names:
             st.session_state["creation_status"] = "error"
             st.session_state["creation_message"] = f"Vector database '{vdb_name}' already exists. Please choose a different name."
             return
-        
-        # Get vector IO provider
-        providers = llama_stack_api.client.providers.list()
-        vector_io_provider = None
-        for provider in providers:
-            if provider.api == "vector_io":
-                vector_io_provider = provider.provider_id
-                break
-                
-        if not vector_io_provider:
-            st.session_state["creation_status"] = "error"
-            st.session_state["creation_message"] = "No vector IO provider found. Cannot create vector database."
-            return
-        
-        # Create the vector database
+
+        # Create the vector database using the new simplified API
+        # Note: embedding settings (dimension, model, provider) must be configured at the server level
         with st.spinner(f"Creating vector database '{vdb_name}'..."):
-            vector_db = llama_stack_api.client.vector_dbs.register(
-                vector_db_id=vdb_name,
-                embedding_dimension=384,
-                embedding_model="all-MiniLM-L6-v2",
-                provider_id=vector_io_provider,
+            vector_db = llama_stack_api.client.vector_stores.create(
+                name=vdb_name,
             )
             
         # Success
@@ -312,7 +262,7 @@ def _show_document_upload_ui(vector_db_name, vector_db_obj=None):
             st.session_state[upload_key].add(file_set_id)
             
             # Get the correct database ID for upload
-            vector_db_id = vector_db_obj.identifier if vector_db_obj and hasattr(vector_db_obj, 'identifier') else vector_db_name
+            vector_db_id = vector_db_obj.id if vector_db_obj and hasattr(vector_db_obj, 'id') else vector_db_name
             
             # Upload automatically
             _upload_documents_to_database(vector_db_name, uploaded_files, vector_db_id)
@@ -336,25 +286,25 @@ def _upload_documents_to_database(vector_db_name, uploaded_files, vector_db_id=N
             st.session_state["upload_message"] = "No files selected for upload."
             return
         
-        # Convert uploaded files into RAGDocument instances
-        with st.spinner(f"Processing {len(uploaded_files)} file(s)..."):
-            documents = [
-                RAGDocument(
-                    document_id=uploaded_file.name,
-                    content=data_url_from_file(uploaded_file),
-                    metadata={"source": uploaded_file.name, "type": "uploaded_file"}  # LlamaStack maps 'source' to chunk_metadata.source
-                )
-                for uploaded_file in uploaded_files
-            ]
-        
-        # Insert documents into the existing vector database
+        # Upload files using the new Files API + Vector Stores API
         actual_db_id = vector_db_id or vector_db_name
-        with st.spinner(f"Uploading documents to '{vector_db_name}'..."):
-            llama_stack_api.client.tool_runtime.rag_tool.insert(
-                vector_db_id=actual_db_id,  # Use the correct database ID
-                documents=documents,
-                chunk_size_in_tokens=512,
-            )
+        uploaded_file_ids = []
+
+        with st.spinner(f"Uploading {len(uploaded_files)} file(s)..."):
+            for uploaded_file in uploaded_files:
+                # Step 1: Upload file to Files API
+                file_response = llama_stack_api.client.files.create(
+                    file=uploaded_file,
+                    purpose="assistants"
+                )
+
+                # Step 2: Attach file to vector store
+                llama_stack_api.client.vector_stores.files.create(
+                    vector_store_id=actual_db_id,
+                    file_id=file_response.id,
+                )
+
+                uploaded_file_ids.append(file_response.id)
         
         # Success
         st.session_state["upload_status"] = "success"
@@ -369,133 +319,52 @@ def _upload_documents_to_database(vector_db_name, uploaded_files, vector_db_id=N
         st.rerun()
 
 
-def _get_documents_from_pgvector(vector_db_id):
+def _get_documents_from_vector_store(vector_store_id):
     """
-    Query pgvector directly to get document IDs stored in the database.
-    Uses a connection pool for efficient connection reuse.
-    
+    Get files from a vector store using the Files API.
+
     Args:
-        vector_db_id (str): The vector database identifier
-        
+        vector_store_id (str): The vector store identifier
+
     Returns:
-        list: List of unique document IDs, or None if query fails
+        list: List of file objects, or None if query fails
     """
     try:
-        async def fetch_documents():
-            try:
-                # Get connection from pool
-                pool = await _get_pg_pool()
-                
-                async with pool.acquire() as conn:
-                    # Query for unique document IDs from the document JSONB column
-                    # The vector_db_id is used as the table name with underscores replacing hyphens
-                    table_name = f"vs_{vector_db_id.replace('-', '_')}"
-                    
-                    # Query metadata.source where LlamaStack stores the filename
-                    # Try multiple paths since different upload methods use different structures:
-                    # - Ingestion pipeline: metadata.source
-                    # - Manual upload: chunk_metadata.source
-                    # Fall back to auto-generated document_id if source is null
-                    query = f"""
-                        SELECT DISTINCT 
-                            COALESCE(
-                                NULLIF(document->'metadata'->>'source', 'null'),
-                                NULLIF(document->'chunk_metadata'->>'source', 'null'),
-                                document->'metadata'->>'document_id'
-                            ) as document_id
-                        FROM {table_name}
-                        WHERE document->'metadata'->>'document_id' IS NOT NULL
-                           OR document->'metadata'->>'source' IS NOT NULL
-                        ORDER BY document_id
-                    """
-                    
-                    queries = [query]
-                    
-                    doc_ids = []
-                    for query in queries:
-                        try:
-                            rows = await conn.fetch(query)
-                            if rows:
-                                doc_ids = [row['document_id'] for row in rows if row['document_id']]
-                                if doc_ids:
-                                    break
-                        except Exception as e:
-                            continue  # Try next query pattern
-                    
-                    return doc_ids if doc_ids else None
-                # Connection automatically returned to pool
-                
-            except Exception as e:
-                return None
-        
-        # Run the async function
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(fetch_documents())
-        
+        # List files in the vector store
+        files_response = llama_stack_api.client.vector_stores.files.list(
+            vector_store_id=vector_store_id
+        )
+
+        # Extract file information
+        if hasattr(files_response, 'data'):
+            return files_response.data
+        else:
+            return list(files_response) if files_response else None
+
     except Exception as e:
+        print(f"Error listing files from vector store: {e}")
         return None
 
 
-def _delete_document_from_pgvector(vector_db_id, filename):
+def _delete_file_from_vector_store(vector_store_id, file_id):
     """
-    Delete a document and all its chunks/embeddings from pgvector.
-    Uses a connection pool for efficient connection reuse.
-    
+    Delete a file from a vector store using the Files API.
+
     Args:
-        vector_db_id (str): The vector database identifier
-        filename (str): The filename/source to delete
-        
+        vector_store_id (str): The vector store identifier
+        file_id (str): The file ID to delete
+
     Returns:
-        tuple: (success: bool, deleted_count: int, error_message: str)
+        tuple: (success: bool, error_message: str)
     """
     try:
-        async def delete_document():
-            try:
-                # Get connection from pool
-                pool = await _get_pg_pool()
-                
-                async with pool.acquire() as conn:
-                    # The vector_db_id is used as the table name with underscores replacing hyphens
-                    table_name = f"vs_{vector_db_id.replace('-', '_')}"
-                    
-                    # Delete all chunks where the source matches the filename
-                    # Handle both document structures:
-                    # - Ingestion pipeline: metadata.source
-                    # - Manual upload: chunk_metadata.source
-                    query = f"""
-                        DELETE FROM {table_name}
-                        WHERE document->'metadata'->>'source' = $1
-                           OR document->'chunk_metadata'->>'source' = $1
-                    """
-                    
-                    result = await conn.execute(query, filename)
-                    
-                    # Parse the result to get the number of deleted rows
-                    # Result format is like "DELETE 5" where 5 is the number of rows
-                    deleted_count = int(result.split()[-1]) if result else 0
-                    
-                    return True, deleted_count, None
-                # Connection automatically returned to pool
-                
-            except Exception as e:
-                return False, 0, str(e)
-        
-        # Run the async function
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(delete_document())
-        
+        llama_stack_api.client.vector_stores.files.delete(
+            file_id=file_id,
+            vector_store_id=vector_store_id
+        )
+        return True, None
     except Exception as e:
-        return False, 0, str(e)
+        return False, str(e)
 
 
 def _show_existing_documents_table(vector_db_name, vector_db_obj=None):
@@ -508,8 +377,8 @@ def _show_existing_documents_table(vector_db_name, vector_db_obj=None):
     """
     try:
         # Get the correct vector database ID
-        if vector_db_obj and hasattr(vector_db_obj, 'identifier'):
-            vector_db_id = vector_db_obj.identifier
+        if vector_db_obj and hasattr(vector_db_obj, 'id'):
+            vector_db_id = vector_db_obj.id
         else:
             vector_db_id = vector_db_name  # Fallback to display name
         
@@ -530,14 +399,15 @@ def _show_existing_documents_table(vector_db_name, vector_db_obj=None):
             st.session_state["delete_message"] = ""
         
         with st.spinner("Checking for documents..."):
-            # First, try to get document list from pgvector directly
-            document_ids = _get_documents_from_pgvector(vector_db_id)
-            
-            if document_ids:
-                # Success! We have the actual document filenames
+            # Get files from vector store using the Files API
+            files = _get_documents_from_vector_store(vector_db_id)
+
+            if files:
+                # Success! We have the files
                 # Show heading for documents section
                 st.subheader(f"📄 Documents in '{vector_db_name}'")
-                
+                st.info("ℹ️ File deletion is currently not available.")
+
                 # Add CSS for bordered table rows
                 st.markdown("""
                 <style>
@@ -562,34 +432,26 @@ def _show_existing_documents_table(vector_db_name, vector_db_obj=None):
                 with col3:
                     st.markdown("**Del**")
                 
-                # Display each document in a row with delete button
-                for idx, doc_id in enumerate(document_ids, start=1):
+                # Display each file in a row with delete button
+                for idx, file_obj in enumerate(files, start=1):
                     col1, col2, col3 = st.columns([0.5, 5, 0.5])
-                    
+
+                    # Extract file information
+                    file_id = getattr(file_obj, 'id', 'unknown')
+                    # Try to get filename from metadata or use file_id
+                    filename = file_id
+
                     with col1:
                         st.write(idx)
-                    
+
                     with col2:
-                        st.write(doc_id)
-                    
+                        st.write(filename)
+
                     with col3:
-                        delete_key = f"delete_{vector_db_name}_{doc_id}_{idx}"
-                        
-                        if st.button("✕", key=delete_key, help=f"Delete {doc_id}"):
-                            # Delete immediately without confirmation
-                            success, deleted_count, error = _delete_document_from_pgvector(
-                                vector_db_id,
-                                doc_id
-                            )
-                            
-                            if success:
-                                st.session_state["delete_status"] = "success"
-                                st.session_state["delete_message"] = f"✅ Successfully deleted '{doc_id}' ({deleted_count} chunk(s) removed)"
-                            else:
-                                st.session_state["delete_status"] = "error"
-                                st.session_state["delete_message"] = f"❌ Failed to delete '{doc_id}': {error}"
-                            
-                            st.rerun()
+                        delete_key = f"delete_{vector_db_name}_{file_id}_{idx}"
+
+                        # Disable delete button
+                        st.button("✕", key=delete_key, disabled=True, help="Delete is currently not available")
             
             # else: Database appears empty or pgvector query not available
             # For newly created databases, this is expected - just show nothing

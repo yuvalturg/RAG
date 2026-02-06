@@ -16,7 +16,7 @@ def vector_dbs():
     """
     st.header("Vector Databases")
     # Fetch all vector databases
-    vdb_list = llama_stack_api.client.vector_dbs.list()
+    vdb_list = llama_stack_api.client.vector_stores.list()
     if not vdb_list:
         st.info("No vector databases found.")
         return

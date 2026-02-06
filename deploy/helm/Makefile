@@ -479,11 +479,11 @@ install: ## Install the RAG deployment
 		fi; \
 		if [ -n "$(LLM_URL)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting LLM URL: $(LLM_URL)"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).url='$(LLM_URL)'"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).url=$(LLM_URL)"; \
 		fi; \
 		if [ -n "$(LLM_API_TOKEN)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting LLM API token"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).apiToken='$(LLM_API_TOKEN)'"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).apiToken=$(LLM_API_TOKEN)"; \
 		fi; \
 	fi; \
 	if [ -n "$(SAFETY)" ]; then \
