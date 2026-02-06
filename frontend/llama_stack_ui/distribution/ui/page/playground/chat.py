@@ -124,6 +124,15 @@ def render_history(tool_debug):
                 with st.expander("🧠 Reasoning", expanded=False):
                     st.markdown(msg['reasoning'])
 
+            # Display tool results if present
+            if msg.get('tool_results'):
+                for tool_result in msg['tool_results']:
+                    with st.expander(tool_result['title'], expanded=False):
+                        if tool_result['type'] == 'json':
+                            st.json(tool_result['content'])
+                        else:
+                            st.code(tool_result['content'])
+
             st.markdown(msg['content'])
 
             # Display debug events expander for assistant messages (excluding the initial greeting)
@@ -643,12 +652,33 @@ def tool_chat_page():
                     if hasattr(event, 'result'):
                         result = event.result
                         debug(f"  -> result: {result}")
-                        # Check for tool executions
+
+                        # Check for function calls (inference step)
                         if hasattr(result, 'function_calls') and result.function_calls:
                             for func_call in result.function_calls:
                                 tool_name = getattr(func_call, 'tool_name', 'unknown')
                                 debug(f"  -> function call: {tool_name}")
                                 yield f'\n\n🛠 :grey[_Using "{tool_name}" tool:_]\n\n'
+
+                        # Check for tool calls (tool execution step)
+                        if hasattr(result, 'tool_calls') and result.tool_calls:
+                            debug(f"  -> tool_calls: {result.tool_calls}")
+                            for tool_call in result.tool_calls:
+                                tool_name = getattr(tool_call, 'tool_name', 'unknown')
+                                debug(f"  -> tool call in execution: {tool_name}")
+
+                        # Check for tool responses (tool execution step)
+                        if hasattr(result, 'tool_responses') and result.tool_responses:
+                            debug(f"  -> tool_responses count: {len(result.tool_responses)}")
+                            for tool_response in result.tool_responses:
+                                tool_name = getattr(tool_response, 'tool_name', 'unknown')
+                                content = getattr(tool_response, 'content', None)
+                                debug(f"  -> tool response from {tool_name}: {str(content)[:100]}")
+                                if content:
+                                    with st.expander(f"🔧 Tool Output: {tool_name}", expanded=False):
+                                        st.code(str(content))
+                        else:
+                            debug(f"  -> no tool_responses in result")
 
                 elif event_type == 'turn_completed':
                     # Log completion for debugging
@@ -694,12 +724,14 @@ def tool_chat_page():
         with st.chat_message("assistant"):
             # Create containers for dynamic content
             reasoning_container = st.empty()
+            tool_results_container = st.container()
             message_placeholder = st.empty()
 
             reasoning_text = ""
             has_reasoning = False
             reasoning_expander = None
             reasoning_placeholder = None
+            tool_results = []
             full_response = rag_info
 
             # Use responses API for Direct mode
@@ -785,6 +817,56 @@ def tool_chat_page():
                             full_response += f"\n\n❌ **Error**: {error_msg}\n"
                         message_placeholder.markdown(full_response)
 
+                    elif chunk.type == "response.output_item.done":
+                        debug(f"  -> Output item done: {chunk}")
+                        # Handle tool execution completion with results
+                        if hasattr(chunk, 'item'):
+                            item = chunk.item
+                            item_type = getattr(item, 'type', None)
+                            debug(f"  -> Item type: {item_type}")
+
+                            if item_type == "file_search_call":
+                                # File search results
+                                if hasattr(item, 'results') and item.results:
+                                    debug(f"  -> File search results: {len(item.results)} items")
+                                    tool_results.append({
+                                        'title': '📄 File Search Results',
+                                        'type': 'json',
+                                        'content': item.results
+                                    })
+                                    # Display in persistent container
+                                    with tool_results_container:
+                                        with st.expander("📄 File Search Results", expanded=False):
+                                            st.json(item.results)
+                            elif item_type == "function_call":
+                                # Function call output
+                                if hasattr(item, 'output') and item.output:
+                                    debug(f"  -> Function output: {str(item.output)[:100]}")
+                                    tool_name = getattr(item, 'name', 'function')
+                                    tool_results.append({
+                                        'title': f'🔧 Tool Output: {tool_name}',
+                                        'type': 'code',
+                                        'content': str(item.output)
+                                    })
+                                    # Display in persistent container
+                                    with tool_results_container:
+                                        with st.expander(f"🔧 Tool Output: {tool_name}", expanded=False):
+                                            st.code(str(item.output))
+                            elif item_type == "mcp_call":
+                                # MCP call output
+                                if hasattr(item, 'output') and item.output:
+                                    debug(f"  -> MCP output: {str(item.output)[:100]}")
+                                    tool_name = getattr(item, 'name', 'mcp')
+                                    tool_results.append({
+                                        'title': f'🔧 MCP Tool Output: {tool_name}',
+                                        'type': 'code',
+                                        'content': str(item.output)
+                                    })
+                                    # Display in persistent container
+                                    with tool_results_container:
+                                        with st.expander(f"🔧 MCP Tool Output: {tool_name}", expanded=False):
+                                            st.code(str(item.output))
+
                     elif chunk.type == "response.done":
                         has_output = (
                             hasattr(chunk, 'response') and
@@ -810,6 +892,9 @@ def tool_chat_page():
         # Save reasoning if present
         if has_reasoning and reasoning_text:
             response_dict["reasoning"] = reasoning_text
+        # Save tool results if present
+        if tool_results:
+            response_dict["tool_results"] = tool_results
         st.session_state.messages.append(response_dict)
 
     def process_prompt(prompt):
