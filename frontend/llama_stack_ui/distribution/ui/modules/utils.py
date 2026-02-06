@@ -91,20 +91,20 @@ def get_question_suggestions():
 def get_suggestions_for_databases(selected_dbs, all_vector_dbs):
     """
     Get combined question suggestions for selected databases.
-    
+
     Args:
         selected_dbs: List of selected vector DB names
         all_vector_dbs: List of all vector DB objects from API
-    
+
     Returns:
         List of tuples (question, source_db_name)
     """
     suggestions_map = get_question_suggestions()
     combined_suggestions = []
-    
+
     if not suggestions_map:
         return []
-    
+
     # Create a mapping from vector_db_name to id
     db_name_to_id = {
         get_vector_db_name(vdb): vdb.id
@@ -121,9 +121,9 @@ def get_suggestions_for_databases(selected_dbs, all_vector_dbs):
             questions = suggestions_map[db_id]
         elif db_name in suggestions_map:
             questions = suggestions_map[db_name]
-        
+
         if questions:
             for question in questions:
                 combined_suggestions.append((question, db_name))
-    
+
     return combined_suggestions

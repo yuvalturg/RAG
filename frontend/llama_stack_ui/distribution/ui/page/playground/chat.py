@@ -6,14 +6,19 @@
 
 import enum
 import json
+import sys
 import uuid
 
 import streamlit as st
 from llama_stack_client.lib.agents.agent import Agent
 from llama_stack_client.lib.agents.react.agent import ReActAgent
-from llama_stack_ui.distribution.ui.modules.api import llama_stack_api
-from llama_stack_ui.distribution.ui.modules.utils import get_suggestions_for_databases, get_vector_db_name
 from llama_stack_client.types import UserMessage
+
+from llama_stack_ui.distribution.ui.modules.api import llama_stack_api
+from llama_stack_ui.distribution.ui.modules.utils import (
+    get_suggestions_for_databases,
+    get_vector_db_name,
+)
 
 
 class AgentType(enum.Enum):
@@ -36,7 +41,7 @@ def render_history(tool_debug):
         st.session_state.messages = [{"role": "assistant", "content": "How can I help you?"}]
     # Initialize debug_events in the session state if not present
     if 'debug_events' not in st.session_state:
-         st.session_state.debug_events = []
+        st.session_state.debug_events = []
 
     for i, msg in enumerate(st.session_state.messages):
         with st.chat_message(msg['role']):
@@ -51,11 +56,15 @@ def render_history(tool_debug):
                 # For A_1 (msg index 2), the debug_events index is (2//2)-1 = 0.
                 debug_event_list_index = (i // 2) - 1
                 if 0 <= debug_event_list_index < len(st.session_state.debug_events):
-                    current_turn_events_list = st.session_state.debug_events[debug_event_list_index]
+                    current_turn_events_list = (
+                        st.session_state.debug_events[debug_event_list_index]
+                    )
 
-                    if current_turn_events_list: # Only show expander if there are events
+                    # Only show expander if there are events
+                    if current_turn_events_list:
                         with st.expander("Tool/Debug Events", expanded=False):
-                            if isinstance(current_turn_events_list, list) and len(current_turn_events_list) > 0:
+                            if (isinstance(current_turn_events_list, list)
+                                    and len(current_turn_events_list) > 0):
                                 for event_idx, event_item in enumerate(current_turn_events_list):
                                     with st.container():
                                         if isinstance(event_item, dict):
@@ -66,13 +75,16 @@ def render_history(tool_debug):
                                                 value=event_item,
                                                 height=100,
                                                 disabled=True,
-                                                key=f"debug_event_msg{i}_item{event_idx}" # Unique key for each text area
+                                                # Unique key for each text area
+                                                key=f"debug_event_msg{i}_item{event_idx}",
                                             )
                                         else:
-                                            st.write(event_item) # Fallback for other data types
+                                            # Fallback for other data types
+                                            st.write(event_item)
                                         if event_idx < len(current_turn_events_list) - 1:
                                             st.divider()
-                            elif isinstance(current_turn_events_list, list) and not current_turn_events_list:
+                            elif (isinstance(current_turn_events_list, list)
+                                    and not current_turn_events_list):
                                 st.caption("No debug events recorded for this turn.")
                             else: # Should not happen with current logic
                                 st.write("Debug data for this turn (unexpected format):")
@@ -99,7 +111,12 @@ def tool_chat_page():
     with st.sidebar:
         st.title("Configuration")
         st.subheader("Model")
-        model = st.selectbox(label="Model", options=model_list, on_change=reset_agent, label_visibility="collapsed")
+        model = st.selectbox(
+            label="Model",
+            options=model_list,
+            on_change=reset_agent,
+            label_visibility="collapsed",
+        )
 
         ## Added mode
         processing_mode = st.radio(
@@ -111,7 +128,10 @@ def tool_chat_page():
                 "Uses an Agent with tools.",
             ],
             on_change=reset_agent,
-            help="Choose how requests are processed. 'Direct' bypasses agents, 'Agent-based' uses them.",
+            help=(
+                "Choose how requests are processed. 'Direct' bypasses "
+                "agents, 'Agent-based' uses them."
+            ),
         )
 
 
@@ -177,18 +197,6 @@ def tool_chat_page():
                     for idx, tool in enumerate(tools, start=1):
                         st.markdown(f"{idx}. `{tool.split(':')[-1]}`")
 
-            # st.subheader("Agent Configurations")
-            # st.subheader("Agent Type")
-            # agent_type = st.radio(
-            #     label="Select Agent Type",
-            #     options=["Regular", "ReAct"],
-            #     on_change=reset_agent,
-            # )
-
-            # if agent_type == "ReAct":
-            #     agent_type = AgentType.REACT
-            # else:
-            #     agent_type = AgentType.REGULAR
             agent_type = AgentType.REGULAR
 
         st.subheader("Sampling Parameters")
@@ -198,7 +206,7 @@ def tool_chat_page():
             "Temperature",
             0.0, 2.0, 0.1, 0.05,
             on_change=reset_agent,
-            help="Controls randomness. Higher values = more random. (Direct mode only in v0.3.3)"
+            help="Controls randomness. Higher values = more random.",
         )
 
         # Max inference iterations - supported in both modes
@@ -206,19 +214,21 @@ def tool_chat_page():
             "Max Inference Iterations",
             1, 50, 10, 1,
             on_change=reset_agent,
-            help="Maximum number of inference iterations before stopping (Direct mode only in v0.3.3)"
+            help="Maximum number of inference iterations before stopping",
         )
 
         st.subheader("System Prompt")
         default_prompt = "You are a helpful AI assistant."
         if processing_mode == "Agent-based" and agent_type == AgentType.REACT:
-            default_prompt = "You are a helpful ReAct agent. Reason step-by-step to fulfill the user query using available tools."
+            default_prompt = (
+                "You are a helpful ReAct agent. Reason step-by-step to "
+                "fulfill the user query using available tools."
+            )
         system_prompt = st.text_area(
             "System Prompt", value=default_prompt, on_change=reset_agent, height=100
         )
 
         st.subheader("Response Handling")
-        #stream_opt = st.toggle("Stream Response", value=True, on_change=reset_agent)
         tool_debug = st.toggle("Show Tool/Debug Info", value=False)
 
         if st.button("Clear Chat & Reset Config", use_container_width=True):
@@ -228,11 +238,14 @@ def tool_chat_page():
 
     updated_toolgroup_selection = []
     if processing_mode == "Agent-based":
-        for i, tool_name in enumerate(toolgroup_selection):
+        for _, tool_name in enumerate(toolgroup_selection):
             if tool_name == "builtin::rag":
                 if len(selected_vector_dbs) > 0:
                     vector_dbs = llama_stack_api.client.vector_stores.list() or []
-                    vector_db_ids = [vector_db.id for vector_db in vector_dbs if get_vector_db_name(vector_db) in selected_vector_dbs]
+                    vector_db_ids = [
+                        vector_db.id for vector_db in vector_dbs
+                        if get_vector_db_name(vector_db) in selected_vector_dbs
+                    ]
                     # Use the new file_search tool format
                     tool_dict = {
                         "type": "file_search",
@@ -257,11 +270,15 @@ def tool_chat_page():
             )
         else:
             updated_system_prompt = system_prompt.strip()
-            updated_system_prompt = updated_system_prompt if updated_system_prompt.strip().endswith('.') else updated_system_prompt + '.'
+            if not updated_system_prompt.strip().endswith('.'):
+                updated_system_prompt = updated_system_prompt + '.'
             return Agent(
                 client=client,
                 model=model,
-                instructions=f"{updated_system_prompt} When you use a tool always respond with a summary of the result.",
+                instructions=(
+                    f"{updated_system_prompt} When you use a tool always "
+                    "respond with a summary of the result."
+                ),
                 tools=updated_toolgroup_selection,
             )
 
@@ -270,12 +287,21 @@ def tool_chat_page():
         agent = create_agent()
 
         if "agent_session_id" not in st.session_state:
-            st.session_state["agent_session_id"] = agent.create_session(session_name=f"tool_demo_{uuid.uuid4()}")
+            session_name = f"tool_demo_{uuid.uuid4()}"
+            st.session_state["agent_session_id"] = agent.create_session(
+                session_name=session_name
+            )
 
         session_id = st.session_state["agent_session_id"]
 
     if "messages" not in st.session_state:
-        st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?", "stop_reason": "end_of_turn"}]
+        st.session_state["messages"] = [
+            {
+                "role": "assistant",
+                "content": "How can I help you?",
+                "stop_reason": "end_of_turn",
+            }
+        ]
 
     if "debug_events" not in st.session_state: # Per-turn debug logs
         st.session_state["debug_events"] = []
@@ -303,7 +329,10 @@ def tool_chat_page():
         st.markdown("### 💡 Suggested Questions")
 
         # Determine how many questions to show
-        num_to_show = len(suggestions) if st.session_state.show_more_questions else min(4, len(suggestions))
+        if st.session_state.show_more_questions:
+            num_to_show = len(suggestions)
+        else:
+            num_to_show = min(4, len(suggestions))
 
         # Display questions in a grid-like format using columns
         cols_per_row = 2
@@ -327,14 +356,15 @@ def tool_chat_page():
 
         # Show "Show More" or "Show Less" button if there are more than 4 questions
         if len(suggestions) > 4:
-            col1, col2, col3 = st.columns([1, 1, 1])
+            _, col2, _ = st.columns([1, 1, 1])
             with col2:
                 if st.session_state.show_more_questions:
                     if st.button("Show Less", use_container_width=True):
                         st.session_state.show_more_questions = False
                         st.rerun()
                 else:
-                    if st.button(f"Show More ({len(suggestions) - 4} more)", use_container_width=True):
+                    button_text = f"Show More ({len(suggestions) - 4} more)"
+                    if st.button(button_text, use_container_width=True):
                         st.session_state.show_more_questions = True
                         st.rerun()
 
@@ -358,7 +388,8 @@ def tool_chat_page():
                 yield (
                     "\n\n🚨 :red[_Llama Stack server Error:_]\n"
                     "The response received is missing an expected `payload` attribute.\n"
-                    "This could indicate a malformed response or an internal issue within the server.\n\n"
+                    "This could indicate a malformed response or an internal issue "
+                    "within the server.\n\n"
                     f"Error details: {response}"
                 )
                 return
@@ -373,7 +404,9 @@ def tool_chat_page():
                 step_details = payload.step_details
 
                 if step_details.step_type == "inference":
-                    yield from _process_inference_step(current_step_content, tool_results, final_answer)
+                    yield from _process_inference_step(
+                        current_step_content, tool_results, final_answer
+                    )
                     current_step_content = ""
                 elif step_details.step_type == "tool_execution":
                     tool_results = _process_tool_execution(step_details, tool_results)
@@ -429,7 +462,10 @@ def tool_chat_page():
                             st.code(content, language=None)
             else:
                 with st.expander("⚙️ Observation", expanded=False):
-                    st.markdown(":grey[_Tool execution step completed, but no response data found._]")
+                    st.markdown(
+                        ":grey[_Tool execution step completed, "
+                        "but no response data found._]"
+                    )
         except Exception as e:
             with st.expander("⚙️ Error in Tool Execution", expanded=False):
                 st.markdown(f":red[_Error processing tool execution: {str(e)}_]")
@@ -451,7 +487,10 @@ def tool_chat_page():
                 elif isinstance(parsed_content, list) and len(parsed_content) > 0:
                     yield from _format_list_results(parsed_content)
             except json.JSONDecodeError:
-                yield f"\n**{tool_name}** was used but returned complex data. Check the observation for details.\n"
+                yield (
+                    f"\n**{tool_name}** was used but returned complex data. "
+                    "Check the observation for details.\n"
+                )
             except (TypeError, AttributeError, KeyError, IndexError) as e:
                 print(f"Error processing {tool_name} result: {type(e).__name__}: {e}")
 
@@ -468,7 +507,10 @@ def tool_chat_page():
             if i <= 3:
                 if isinstance(result, dict):
                     name = result.get("name", result.get("title", "Result " + str(i)))
-                    description = result.get("description", result.get("content", result.get("summary", "")))
+                    description = result.get(
+                        "description",
+                        result.get("content", result.get("summary", ""))
+                    )
                     yield f"\n- **{name}**\n  {description}\n"
                 else:
                     yield f"\n- {result}\n"
@@ -541,25 +583,30 @@ def tool_chat_page():
 
         if selected_vector_dbs:
             vector_dbs = llama_stack_api.client.vector_stores.list() or []
-            vector_db_ids = [vector_db.id for vector_db in vector_dbs if get_vector_db_name(vector_db) in selected_vector_dbs]
+            vector_db_ids = [
+                vector_db.id for vector_db in vector_dbs
+                if get_vector_db_name(vector_db) in selected_vector_dbs
+            ]
 
             if vector_db_ids:
                 tools = [{
                     "type": "file_search",
                     "vector_store_ids": list(vector_db_ids)
                 }]
-                rag_info = f"\n\n🔍 *Searching {len(vector_db_ids)} document collection(s): {', '.join(selected_vector_dbs)}*\n\n"
+                rag_info = (
+                    f"\n\n🔍 *Searching {len(vector_db_ids)} document collection(s): "
+                    f"{', '.join(selected_vector_dbs)}*\n\n"
+                )
 
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
             full_response = rag_info
 
             # Use responses API for Direct mode
-            input_text = f"{system_prompt}\n\nUser: {prompt}"
-
             request_kwargs = {
                 "model": model,
-                "input": input_text,
+                "instructions": system_prompt,
+                "input": prompt,
                 "temperature": temperature,
                 "max_infer_iters": max_infer_iters,
                 "stream": True,
@@ -569,6 +616,7 @@ def tool_chat_page():
             if tools:
                 request_kwargs["tools"] = tools
 
+            print(f"[DEBUG] Request: {request_kwargs}", flush=True)
             response = llama_stack_api.client.responses.create(**request_kwargs)
 
             # Display assistant response
@@ -590,10 +638,14 @@ def tool_chat_page():
                                 full_response = rag_info + chunk.response.output_text
 
             message_placeholder.markdown(full_response)
+            print(f"[DEBUG] Final response: {full_response}", flush=True)
 
-        response_dict = {"role": "assistant", "content": full_response, "stop_reason": "end_of_message"}
+        response_dict = {
+            "role": "assistant",
+            "content": full_response,
+            "stop_reason": "end_of_message"
+        }
         st.session_state.messages.append(response_dict)
-        #st.session_state.displayed_messages.append(response_dict)
 
     def process_prompt(prompt):
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -623,9 +675,6 @@ def tool_chat_page():
     if prompt := st.chat_input(placeholder="Ask a question..."):
         # Append the user message to history and display it
         process_prompt(prompt)
-
-
-
 
 
 tool_chat_page()
