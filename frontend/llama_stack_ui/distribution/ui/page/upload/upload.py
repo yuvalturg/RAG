@@ -422,7 +422,6 @@ def _show_existing_documents_table(vector_db_name, vector_db_obj=None):
                 # Success! We have the files
                 # Show heading for documents section
                 st.subheader(f"📄 Documents in '{vector_db_name}'")
-                st.info("ℹ️ File deletion is currently not available.")
 
                 # Add CSS for bordered table rows
                 st.markdown("""
@@ -439,34 +438,52 @@ def _show_existing_documents_table(vector_db_name, vector_db_obj=None):
                 </style>
                 """, unsafe_allow_html=True)
 
+                # Retrieve source for all files: prefer attributes["source"], fallback to filename
+                source_names = {}
+                for file_obj in files:
+                    file_id = getattr(file_obj, 'id', None)
+                    if file_id:
+                        # Check attributes["source"] from the vector store file
+                        attrs = getattr(file_obj, 'attributes', None) or {}
+                        source = attrs.get("source")
+                        if not source:
+                            try:
+                                file_info = llama_stack_api.client.files.retrieve(file_id)
+                                source = getattr(file_info, 'filename', None)
+                            except Exception:
+                                source = None
+                        source_names[file_id] = source
+
                 # Display table header
-                col1, col2, col3 = st.columns([0.5, 5, 0.5])
+                col1, col2, col3, col4 = st.columns([0.5, 3, 3, 0.5])
                 with col1:
                     st.markdown("**#**")
                 with col2:
-                    st.markdown("**Filename**")
+                    st.markdown("**Source**")
                 with col3:
+                    st.markdown("**Document ID**")
+                with col4:
                     st.markdown("**Del**")
 
-                # Display each file in a row with delete button
+                # Display each file in a row
                 for idx, file_obj in enumerate(files, start=1):
-                    col1, col2, col3 = st.columns([0.5, 5, 0.5])
+                    col1, col2, col3, col4 = st.columns([0.5, 3, 3, 0.5])
 
                     # Extract file information
                     file_id = getattr(file_obj, 'id', 'unknown')
-                    # Try to get filename from metadata or use file_id
-                    filename = file_id
+                    source = source_names.get(file_id) or "unknown"
 
                     with col1:
                         st.write(idx)
 
                     with col2:
-                        st.write(filename)
+                        st.write(source)
 
                     with col3:
-                        delete_key = f"delete_{vector_db_name}_{file_id}_{idx}"
+                        st.write(file_id)
 
-                        # Disable delete button
+                    with col4:
+                        delete_key = f"delete_{vector_db_name}_{file_id}_{idx}"
                         st.button(
                             "✕",
                             key=delete_key,
